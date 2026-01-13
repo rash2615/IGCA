@@ -4,7 +4,7 @@
     <div class="cropper-container">
       <div class="cropper-header">
         <h3>Rogner la photo</h3>
-        <button @click="close" class="btn-close">✕</button>
+        <button @click="close" class="btn-close"><span class="material-symbols-outlined">close</span></button>
       </div>
       
       <div class="cropper-content">
@@ -24,7 +24,7 @@
             style="max-width: 100%; max-height: 400px; display: block; margin: 0 auto; border-radius: 8px;"
           />
           <div v-if="cropApplied" class="crop-info">
-            <p>✅ Zone de rognage détectée automatiquement (Ratio 7:9 portrait)</p>
+            <p><span class="material-symbols-outlined" style="vertical-align: middle; margin-right: 5px;">check_circle</span> Zone de rognage détectée automatiquement (Ratio 7:9 portrait)</p>
           </div>
         </div>
         <div v-else class="no-image">
@@ -36,7 +36,7 @@
       <div class="cropper-footer">
         <button @click="close" class="btn-cancel">Annuler</button>
         <button @click="applyCrop" :disabled="!cropApplied" class="btn-apply" type="button">
-          ✓ Appliquer le rognage
+          <span class="material-symbols-outlined" style="vertical-align: middle; margin-right: 5px;">check</span> Appliquer le rognage
         </button>
       </div>
     </div>

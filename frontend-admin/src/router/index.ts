@@ -37,7 +37,7 @@ const appRoutes = [
         component: () => import('@/views/DashboardView.vue'),
         meta: { 
           title: 'Tableau de bord',
-          icon: '📊',
+          icon: 'dashboard',
           roles: ['admin', 'super_admin']
         },
       },
@@ -47,7 +47,7 @@ const appRoutes = [
         component: () => import('@/views/AdhesionsView.vue'),
         meta: { 
           title: 'Adhésions',
-          icon: '👥',
+          icon: 'groups',
           roles: ['admin', 'super_admin']
         },
       },
@@ -57,7 +57,7 @@ const appRoutes = [
         component: () => import('@/views/AdhesionDetailView.vue'),
         meta: { 
           title: 'Détails adhésion',
-          icon: '👥',
+          icon: 'groups',
           roles: ['admin', 'super_admin']
         },
       },
@@ -67,7 +67,7 @@ const appRoutes = [
         component: () => import('@/views/CartesView.vue'),
         meta: { 
           title: 'Cartes membres',
-          icon: '🎴',
+          icon: 'badge',
           roles: ['admin', 'super_admin']
         },
       },
@@ -77,7 +77,7 @@ const appRoutes = [
         component: () => import('@/views/VerificationView.vue'),
         meta: { 
           title: 'Vérification',
-          icon: '✅',
+          icon: 'verified',
           roles: ['admin', 'super_admin', 'benevole']
         },
       },
@@ -87,7 +87,7 @@ const appRoutes = [
         component: () => import('@/views/TransmissionView.vue'),
         meta: { 
           title: 'Transmission',
-          icon: '📤',
+          icon: 'send',
           roles: ['admin', 'super_admin', 'benevole']
         },
       },
@@ -97,7 +97,7 @@ const appRoutes = [
         component: () => import('@/views/ComptabiliteView.vue'),
         meta: { 
           title: 'Comptabilité',
-          icon: '💰',
+          icon: 'account_balance_wallet',
           roles: ['admin', 'super_admin']
         },
       },
@@ -107,7 +107,7 @@ const appRoutes = [
         component: () => import('@/views/DonsView.vue'),
         meta: { 
           title: 'Dons',
-          icon: '💝',
+          icon: 'favorite',
           roles: ['admin', 'super_admin']
         },
       },
@@ -117,7 +117,7 @@ const appRoutes = [
         component: () => import('@/views/MenuView.vue'),
         meta: { 
           title: 'Menu du jour',
-          icon: '🍽️',
+          icon: 'restaurant_menu',
           roles: ['admin', 'super_admin', 'benevole', 'membre']
         },
       },
@@ -127,7 +127,7 @@ const appRoutes = [
         component: () => import('@/views/RolesView.vue'),
         meta: { 
           title: 'Rôles',
-          icon: '👤',
+          icon: 'admin_panel_settings',
           roles: ['admin', 'super_admin']
         },
       },
@@ -137,7 +137,7 @@ const appRoutes = [
         component: () => import('@/views/UsersView.vue'),
         meta: { 
           title: 'Utilisateurs',
-          icon: '👥',
+          icon: 'groups',
           roles: ['admin', 'super_admin']
         },
       },

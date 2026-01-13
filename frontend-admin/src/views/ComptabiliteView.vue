@@ -4,9 +4,10 @@
       <h1>Comptabilité</h1>
       <div class="header-actions">
         <button @click="loadData" :disabled="loading" class="btn-refresh">
-          {{ loading ? 'Chargement...' : '🔄 Actualiser' }}
+          <span v-if="!loading" class="material-symbols-outlined" style="vertical-align: middle; margin-right: 5px;">refresh</span>
+          {{ loading ? 'Chargement...' : 'Actualiser' }}
         </button>
-        <button @click="exportCsv" class="btn-export">📥 Exporter CSV</button>
+        <button @click="exportCsv" class="btn-export"><span class="material-symbols-outlined" style="vertical-align: middle; margin-right: 5px;">download</span> Exporter CSV</button>
       </div>
     </div>
 
@@ -18,7 +19,7 @@
     <div v-else-if="overview" class="overview">
       <!-- Adhésions -->
       <div class="section">
-        <h2>📋 Adhésions</h2>
+        <h2><span class="material-symbols-outlined" style="vertical-align: middle; margin-right: 5px;">description</span> Adhésions</h2>
         <div class="stats">
           <div class="stat">
             <span class="label">Total adhésions :</span>
@@ -50,7 +51,7 @@
 
       <!-- Dons -->
       <div class="section">
-        <h2>💝 Dons</h2>
+        <h2><span class="material-symbols-outlined" style="vertical-align: middle; margin-right: 5px;">favorite</span> Dons</h2>
         <div class="stats">
           <div class="stat">
             <span class="label">Total dons :</span>
@@ -82,7 +83,7 @@
 
       <!-- Total général -->
       <div class="section total">
-        <h2>💰 Total général</h2>
+        <h2><span class="material-symbols-outlined" style="vertical-align: middle; margin-right: 5px;">account_balance_wallet</span> Total général</h2>
         <div class="total-amount">
           {{ formatAmount(
             (overview.adhesions?.total_montant || 0) + 

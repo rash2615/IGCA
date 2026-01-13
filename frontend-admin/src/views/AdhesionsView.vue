@@ -1,227 +1,305 @@
 <template>
-  <div class="adhesions">
-    <div class="header">
-      <h1>Adhésions</h1>
-      <button @click="openCreateModal" class="btn-primary">
-        ➕ Nouvelle adhésion
-      </button>
+  <div class="adhesions-modern">
+    <!-- Header avec actions principales -->
+    <div class="page-header">
+      <div class="header-content">
+        <h1>Adhésions</h1>
+        <div class="header-actions">
+          <button @click="showSyncModal = true" class="btn-icon" title="Synchroniser HelloAsso">
+            <span class="material-symbols-outlined">sync</span>
+          </button>
+          <button @click="showImportModal = true" class="btn-icon" title="Importer CSV">
+            <span class="material-symbols-outlined">upload</span>
+          </button>
+          <button @click="exportCsv" class="btn-icon" title="Exporter CSV">
+            <span class="material-symbols-outlined">download</span>
+          </button>
+          <button @click="openCreateModal" class="btn-primary">
+            <span class="material-symbols-outlined">add</span>
+            Nouvelle adhésion
+          </button>
+        </div>
+      </div>
     </div>
 
-    <div class="actions">
-      <button @click="showSyncModal = true" class="btn-sync">🔄 Synchroniser HelloAsso</button>
-      <button @click="showImportModal = true" class="btn-secondary">📥 Importer CSV</button>
-      <button @click="exportCsv" class="btn-secondary">📤 Exporter CSV</button>
-    </div>
-
-    <!-- Onglets pour organiser les adhésions -->
-    <div class="tabs">
+    <!-- Barre de recherche et filtres rapides -->
+    <div class="search-bar">
+      <div class="search-input-wrapper">
+        <span class="material-symbols-outlined search-icon">search</span>
+        <input
+          v-model="filters.search"
+          type="text"
+          placeholder="Rechercher par nom, prénom, email..."
+          @input="debounceSearch"
+          class="search-input"
+        />
+        <button v-if="filters.search" @click="clearSearch" class="clear-search">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
       <button 
-        v-for="tab in tabs" 
-        :key="tab.id"
-        @click="activeTab = tab.id"
-        :class="['tab-button', { active: activeTab === tab.id }]"
+        @click="showFilters = !showFilters" 
+        class="btn-filters"
+        :class="{ active: showFilters || hasActiveFilters }"
       >
-        {{ tab.label }}
-        <span v-if="tab.count !== undefined" class="tab-count">({{ tab.count }})</span>
+        <span class="material-symbols-outlined">tune</span>
+        Filtres
+        <span v-if="activeFiltersCount > 0" class="filter-badge">{{ activeFiltersCount }}</span>
       </button>
     </div>
 
-    <div class="filters">
-      <input
-        v-model="filters.search"
-        type="text"
-        placeholder="Rechercher (nom, prénom, email)..."
-        @input="() => loadAdhesions(1)"
-      />
-      <select v-model="filters.annee" @change="handleYearChange">
-        <option value="">Toutes les années</option>
-        <option v-for="year in availableYears" :key="year" :value="year">{{ year }}</option>
-      </select>
-      <select v-model="filters.statut" @change="loadAdhesions">
-        <option value="">Tous les statuts</option>
-        <option value="actif">Actif</option>
-        <option value="expire">Expiré</option>
-        <option value="renouvele">Renouvelé</option>
-        <option value="a_generer">À générer</option>
-      </select>
-      <select v-model="filters.moyen_paiement" @change="loadAdhesions">
-        <option value="">Tous les moyens de paiement</option>
-        <option value="helloasso">HelloAsso</option>
-        <option value="especes">Espèces</option>
-        <option value="cheque">Chèque</option>
-        <option value="cb">Carte Bancaire</option>
-        <option value="virement">Virement</option>
-      </select>
-      <button @click="showBulkStatusModal = true" class="btn-secondary" :disabled="selectedAdhesions.length === 0">
-        ✏️ Modifier le statut ({{ selectedAdhesions.length }})
-      </button>
-      <input
-        v-model="filters.helloasso_campaign_id"
-        type="text"
-        placeholder="ID Campagne HelloAsso"
-        @input="() => loadAdhesions(1)"
-      />
+    <!-- Panneau de filtres avancés -->
+    <div v-if="showFilters" class="filters-panel">
+      <div class="filters-content">
+        <div class="filter-group">
+          <label>Année</label>
+          <select v-model="filters.annee" @change="applyFilters">
+            <option value="">Toutes les années</option>
+            <option v-for="year in availableYears" :key="year" :value="year">{{ year }}</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Statut</label>
+          <div class="filter-chips">
+            <button
+              v-for="statut in statuts"
+              :key="statut.value"
+              @click="toggleStatutFilter(statut.value)"
+              :class="['chip', { active: filters.statut === statut.value }]"
+            >
+              <span class="material-symbols-outlined">{{ statut.icon }}</span>
+              {{ statut.label }}
+            </button>
+          </div>
+        </div>
+        <div class="filter-group">
+          <label>Moyen de paiement</label>
+          <div class="filter-chips">
+            <button
+              v-for="moyen in moyensPaiement"
+              :key="moyen.value"
+              @click="toggleMoyenPaiementFilter(moyen.value)"
+              :class="['chip', { active: filters.moyen_paiement === moyen.value }]"
+            >
+              <span class="material-symbols-outlined">{{ moyen.icon }}</span>
+              {{ moyen.label }}
+            </button>
+          </div>
+        </div>
+        <div class="filter-group">
+          <label>Source</label>
+          <div class="filter-chips">
+            <button
+              @click="toggleSourceFilter('online')"
+              :class="['chip', { active: filters.source === 'online' }]"
+            >
+              <span class="material-symbols-outlined">language</span>
+              En ligne
+            </button>
+            <button
+              @click="toggleSourceFilter('offline')"
+              :class="['chip', { active: filters.source === 'offline' }]"
+            >
+              <span class="material-symbols-outlined">store</span>
+              Hors ligne
+            </button>
+          </div>
+        </div>
+        <div class="filter-group">
+          <label>ID Campagne HelloAsso</label>
+          <input
+            v-model="filters.helloasso_campaign_id"
+            type="text"
+            placeholder="Filtrer par ID campagne"
+            @input="debounceSearch"
+          />
+        </div>
+        <div class="filter-actions">
+          <button @click="resetFilters" class="btn-secondary">Réinitialiser</button>
+          <button @click="showFilters = false" class="btn-primary">Appliquer</button>
+        </div>
+      </div>
     </div>
 
-    <div v-if="loading" class="loading">Chargement...</div>
-    <div v-else-if="adhesions.length === 0" class="empty-state">
-      <p>Aucune adhésion trouvée</p>
+    <!-- Statistiques rapides -->
+    <div class="stats-bar">
+      <div class="stat-item">
+        <span class="stat-value">{{ totalAdhesions }}</span>
+        <span class="stat-label">Total</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-value">{{ adhesionsByYear.length }}</span>
+        <span class="stat-label">Années</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-value">{{ selectedAdhesions.length }}</span>
+        <span class="stat-label">Sélectionné(s)</span>
+      </div>
+      <div v-if="selectedAdhesions.length > 0" class="bulk-actions">
+        <button @click="showBulkStatusModal = true" class="btn-secondary btn-sm">
+          <span class="material-symbols-outlined">edit</span>
+          Modifier le statut
+        </button>
+      </div>
     </div>
-    <div v-else class="table-wrapper">
-      <table class="data-table">
-        <thead>
-        <tr>
-          <th>
-            <input type="checkbox" @change="toggleSelectAll" :checked="allSelected" />
-          </th>
-          <th>Nom</th>
-          <th>Prénom</th>
-          <th>Email</th>
-          <th>Date</th>
-          <th>Tarif</th>
-          <th>Moyen de paiement</th>
-          <th>Statut</th>
-          <th>Prévisualisation</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="adhesion in adhesions" :key="adhesion.id">
-          <td>
-            <input 
-              type="checkbox" 
-              :value="adhesion.id" 
-              v-model="selectedAdhesions"
-            />
-          </td>
-          <td>
-            <div class="adhesion-cell">
-              <img 
-                v-if="adhesion.photo_url" 
-                :src="getImageUrl(adhesion.photo_url)" 
-                :alt="`${adhesion.nom} ${adhesion.prenom}`"
-                class="adhesion-thumbnail"
-                @error="handleImageError"
+
+    <!-- Loading -->
+    <div v-if="loading" class="loading-container">
+      <div class="spinner"></div>
+      <p>Chargement des adhésions...</p>
+    </div>
+
+    <!-- Vue groupée par année -->
+    <div v-else-if="adhesionsByYear.length > 0" class="adhesions-container">
+      <div v-for="group in adhesionsByYear" :key="group.year" class="year-group">
+        <div class="year-header">
+          <h2 class="year-title">
+            <span class="material-symbols-outlined">calendar_today</span>
+            {{ group.year }}
+          </h2>
+          <span class="year-count">{{ group.adhesions.length }} adhésion(s)</span>
+        </div>
+        <div class="cards-grid">
+          <div
+            v-for="adhesion in group.adhesions"
+            :key="adhesion.id"
+            class="adhesion-card"
+            :class="{ selected: selectedAdhesions.includes(adhesion.id) }"
+          >
+            <div class="card-checkbox">
+              <input
+                type="checkbox"
+                :value="adhesion.id"
+                v-model="selectedAdhesions"
               />
-              <div v-else class="no-photo-placeholder">📷</div>
-              <span>{{ adhesion.nom }}</span>
             </div>
-          </td>
-          <td>{{ adhesion.prenom }}</td>
-          <td>{{ adhesion.email }}</td>
-          <td>{{ formatDate(adhesion.date_adhesion) }}</td>
-          <td>{{ adhesion.tarif }} €</td>
-          <td>
-            <span :class="['payment-badge', `payment-${adhesion.moyen_paiement || 'helloasso'}`]">
-              {{ formatPaymentMethod(adhesion.moyen_paiement) }}
-            </span>
-          </td>
-          <td>
-            <div class="status-cell">
-              <select 
-                v-model="adhesion.statut" 
-                @change="updateStatus(adhesion.id, adhesion.statut)"
-                class="status-select"
-              >
-                <option value="actif">Actif</option>
-                <option value="expire">Expiré</option>
-                <option value="renouvele">Renouvelé</option>
-                <option value="a_generer">À générer</option>
-              </select>
-            </div>
-          </td>
-          <td class="preview-cell">
-            <div v-if="isAdhesionComplete(adhesion)" class="carte-preview-container">
-              <div v-if="adhesion.carte_id" class="carte-preview">
-                <div class="carte-preview-content">
-                  <img 
-                    v-if="adhesion.photo_url" 
-                    :src="getImageUrl(adhesion.photo_url)" 
-                    :alt="`${adhesion.nom} ${adhesion.prenom}`"
-                    class="carte-photo"
-                  />
-                  <div class="carte-info">
-                    <div class="carte-nom">{{ adhesion.prenom }} {{ adhesion.nom }}</div>
-                    <div class="carte-numero" v-if="adhesion.numero_carte">{{ adhesion.numero_carte }}</div>
-                    <div class="carte-statut-badge" :class="`statut-${adhesion.carte_statut}`">
-                      {{ formatCarteStatut(adhesion.carte_statut) }}
-                    </div>
-                  </div>
+            <div class="card-header">
+              <div class="card-photo">
+                <img
+                  v-if="adhesion.photo_url"
+                  :src="getImageUrl(adhesion.photo_url)"
+                  :alt="`${adhesion.nom} ${adhesion.prenom}`"
+                  @error="handleImageError"
+                />
+                <div v-else class="photo-placeholder">
+                  <span class="material-symbols-outlined">person</span>
                 </div>
-                <button 
-                  @click="viewCartePreview(adhesion.carte_id)" 
-                  class="btn-preview-carte"
-                  title="Voir la prévisualisation complète"
-                >
-                  👁️
-                </button>
               </div>
-              <div v-else class="carte-generate">
-                <button 
-                  @click="generateCarteForAdhesion(adhesion)" 
-                  class="btn-generate-carte"
+              <div class="card-info">
+                <h3 class="card-name">{{ adhesion.prenom }} {{ adhesion.nom }}</h3>
+                <p class="card-email">{{ adhesion.email }}</p>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="card-details">
+                <div class="detail-item">
+                  <span class="material-symbols-outlined">calendar_today</span>
+                  <span>{{ formatDate(adhesion.date_adhesion) }}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="material-symbols-outlined">payments</span>
+                  <span>{{ adhesion.tarif }} €</span>
+                </div>
+                <div class="detail-item">
+                  <span class="material-symbols-outlined">{{ getPaymentIcon(adhesion.moyen_paiement) }}</span>
+                  <span>{{ formatPaymentMethod(adhesion.moyen_paiement) }}</span>
+                </div>
+              </div>
+              <div class="card-badges">
+                <span :class="['badge', `badge-${adhesion.statut}`]">
+                  <span class="material-symbols-outlined">{{ getStatutIcon(adhesion.statut) }}</span>
+                  {{ formatStatut(adhesion.statut) }}
+                </span>
+                <span v-if="adhesion.source === 'offline'" class="badge badge-offline">
+                  <span class="material-symbols-outlined">store</span>
+                  Hors ligne
+                </span>
+                <span v-else-if="adhesion.source === 'online'" class="badge badge-online">
+                  <span class="material-symbols-outlined">language</span>
+                  En ligne
+                </span>
+                <span v-if="adhesion.helloasso_id" class="badge badge-helloasso">
+                  <span class="material-symbols-outlined">link</span>
+                  HelloAsso
+                </span>
+                <span v-if="adhesion.carte_id" class="badge badge-carte">
+                  <span class="material-symbols-outlined">badge</span>
+                  Carte
+                </span>
+              </div>
+            </div>
+            <div class="card-footer">
+              <div class="card-actions">
+                <button
+                  @click="viewDetails(adhesion.id)"
+                  class="btn-action"
+                  title="Voir les détails"
+                >
+                  <span class="material-symbols-outlined">visibility</span>
+                </button>
+                <button
+                  @click="editAdhesion(adhesion)"
+                  class="btn-action"
+                  title="Modifier"
+                >
+                  <span class="material-symbols-outlined">edit</span>
+                </button>
+                <button
+                  v-if="!adhesion.carte_id && isAdhesionComplete(adhesion)"
+                  @click="generateCarteForAdhesion(adhesion)"
+                  class="btn-action btn-generate"
                   :disabled="generatingCarte === adhesion.id"
                   title="Générer la carte"
                 >
-                  {{ generatingCarte === adhesion.id ? '⏳' : '🎴 Générer' }}
+                  <span v-if="generatingCarte === adhesion.id" class="material-symbols-outlined">hourglass_empty</span>
+                  <span v-else class="material-symbols-outlined">badge</span>
+                </button>
+                <button
+                  @click="confirmDelete(adhesion)"
+                  class="btn-action btn-danger"
+                  title="Supprimer"
+                >
+                  <span class="material-symbols-outlined">delete</span>
                 </button>
               </div>
             </div>
-            <div v-else class="incomplete-badge">
-              ⚠️ Incomplet
-            </div>
-          </td>
-          <td class="actions-cell">
-            <div class="action-buttons">
-              <button 
-                @click="viewDetails(adhesion.id)" 
-                class="btn-action btn-view" 
-                title="Voir les détails"
-              >
-                <span class="icon">👁️</span>
-              </button>
-              <button 
-                @click="editAdhesion(adhesion)" 
-                class="btn-action btn-edit" 
-                title="Modifier"
-              >
-                <span class="icon">✏️</span>
-              </button>
-              <button 
-                @click="confirmDelete(adhesion)" 
-                class="btn-action btn-delete" 
-                title="Supprimer"
-              >
-                <span class="icon">🗑️</span>
-              </button>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- État vide -->
+    <div v-else class="empty-state">
+      <span class="material-symbols-outlined empty-icon">inbox</span>
+      <h3>Aucune adhésion trouvée</h3>
+      <p v-if="hasActiveFilters">Essayez de modifier vos filtres de recherche</p>
+      <p v-else>Commencez par créer une nouvelle adhésion</p>
     </div>
 
     <!-- Pagination -->
-    <div v-if="!loading && adhesions.length > 0" class="pagination">
-      <button 
-        @click="loadAdhesions(currentPage - 1)" 
+    <div v-if="!loading && totalPages > 1" class="pagination">
+      <button
+        @click="loadAdhesions(currentPage - 1)"
         :disabled="currentPage === 1"
         class="pagination-btn"
       >
-        ← Précédent
+        <span class="material-symbols-outlined">chevron_left</span>
+        Précédent
       </button>
-      <span class="pagination-info">
-        Page {{ currentPage }} sur {{ totalPages }} ({{ totalAdhesions }} adhésion(s) au total)
-      </span>
-      <button 
-        @click="loadAdhesions(currentPage + 1)" 
+      <div class="pagination-info">
+        Page {{ currentPage }} sur {{ totalPages }}
+      </div>
+      <button
+        @click="loadAdhesions(currentPage + 1)"
         :disabled="currentPage >= totalPages"
         class="pagination-btn"
       >
-        Suivant →
+        Suivant
+        <span class="material-symbols-outlined">chevron_right</span>
       </button>
     </div>
 
+    <!-- Modals (garder les modals existants) -->
     <!-- Modal de création/édition -->
     <div v-if="showFormModal" class="modal" @click.self="closeFormModal">
       <div class="modal-content large">
@@ -275,23 +353,25 @@
               <div class="photo-upload-section">
                 <div class="photo-preview" v-if="formData.photo_url || photoPreview">
                   <img :src="photoPreview || formData.photo_url" alt="Photo de profil" class="preview-image" />
-                  <button type="button" @click="clearPhoto" class="btn-remove-photo">✕</button>
+                  <button type="button" @click="clearPhoto" class="btn-remove-photo">
+                    <span class="material-symbols-outlined">close</span>
+                  </button>
                 </div>
                 <div class="photo-inputs">
                   <div class="photo-input-group">
                     <label>Importer un fichier</label>
-                    <input 
-                      type="file" 
-                      @change="handlePhotoFileSelect" 
+                    <input
+                      type="file"
+                      @change="handlePhotoFileSelect"
                       accept="image/*"
                       class="file-input"
                     />
                   </div>
                   <div class="photo-input-group">
                     <label>Ou saisir une URL</label>
-                    <input 
-                      type="url" 
-                      v-model="photoUrlInput" 
+                    <input
+                      type="url"
+                      v-model="photoUrlInput"
                       @input="updatePhotoFromUrl"
                       placeholder="https://example.com/photo.jpg"
                       class="url-input"
@@ -322,104 +402,27 @@
     <!-- Modal synchronisation HelloAsso -->
     <div v-if="showSyncModal" class="modal" @click.self="closeSyncModal">
       <div class="modal-content large">
-        <h2>🔄 Synchroniser avec HelloAsso</h2>
+        <h2><span class="material-symbols-outlined" style="vertical-align: middle; margin-right: 5px;">sync</span> Synchroniser avec HelloAsso</h2>
         <p class="modal-description">
           Synchronisez directement les adhésions depuis votre campagne HelloAsso IGCA Paris.
-          Plus besoin d'importer/exporter manuellement !
         </p>
-        
         <form @submit.prevent="syncHelloAsso" class="form">
           <div class="form-group full-width">
             <label>ID Campagne HelloAsso *</label>
-            <input 
-              v-model="syncForm.campaignId" 
-              type="text" 
+            <input
+              v-model="syncForm.campaignId"
+              type="text"
               placeholder="Ex: 12345678-1234-1234-1234-123456789012"
               required
             />
-            <small>Vous trouvez cet ID dans l'URL de votre campagne HelloAsso</small>
           </div>
-
-          <div class="form-group full-width">
-            <label>Client ID HelloAsso (optionnel)</label>
-            <input 
-              v-model="syncForm.clientId" 
-              type="text" 
-              placeholder="Si vide, utilise la config serveur"
-            />
-            <small>Créé dans les paramètres API de votre compte HelloAsso</small>
-          </div>
-
-          <div class="form-group full-width">
-            <label>Client Secret HelloAsso (optionnel)</label>
-            <input 
-              v-model="syncForm.clientSecret" 
-              type="password" 
-              placeholder="Si vide, utilise la config serveur"
-            />
-          </div>
-
-          <div class="form-group full-width">
-            <label>Token d'accès (optionnel - alternative aux credentials)</label>
-            <input 
-              v-model="syncForm.accessToken" 
-              type="text" 
-              placeholder="Token OAuth2 HelloAsso"
-            />
-          </div>
-
-          <div class="form-options">
-            <label class="checkbox-label">
-              <input type="checkbox" v-model="syncForm.updateExisting" />
-              Mettre à jour les adhésions existantes
-            </label>
-            <label class="checkbox-label">
-              <input type="checkbox" v-model="syncForm.skipDuplicates" />
-              Ignorer les doublons
-            </label>
-          </div>
-
           <div class="form-actions">
-            <button 
-              type="button" 
-              @click="testConnection" 
-              :disabled="testingConnection || syncing"
-              class="btn-secondary"
-            >
-              {{ testingConnection ? 'Test...' : 'Tester la connexion' }}
-            </button>
-            <button 
-              type="submit" 
-              :disabled="!connectionTested || syncing"
-              class="btn-primary"
-            >
+            <button type="submit" :disabled="syncing" class="btn-primary">
               {{ syncing ? 'Synchronisation...' : 'Synchroniser' }}
             </button>
             <button type="button" @click="closeSyncModal" class="btn-cancel">Annuler</button>
           </div>
         </form>
-
-        <div v-if="syncResult" class="sync-result">
-          <h3>Résultat de la synchronisation</h3>
-          <div class="result-stats">
-            <div class="stat-item success">
-              <span class="stat-label">Créées</span>
-              <span class="stat-value">{{ syncResult.stats?.created || 0 }}</span>
-            </div>
-            <div class="stat-item info">
-              <span class="stat-label">Mises à jour</span>
-              <span class="stat-value">{{ syncResult.stats?.updated || 0 }}</span>
-            </div>
-            <div class="stat-item warning">
-              <span class="stat-label">Ignorées</span>
-              <span class="stat-value">{{ syncResult.stats?.skipped || 0 }}</span>
-            </div>
-            <div class="stat-item error" v-if="syncResult.stats?.errors > 0">
-              <span class="stat-label">Erreurs</span>
-              <span class="stat-value">{{ syncResult.stats?.errors || 0 }}</span>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -428,41 +431,7 @@
       <div class="modal-content">
         <h2>Importer un fichier CSV</h2>
         <input type="file" @change="handleFileSelect" accept=".csv" />
-        <div v-if="importData" class="import-preview">
-          <p><strong>{{ importData.records?.length || 0 }} enregistrements trouvés</strong></p>
-          <div v-if="importData.duplicates && importData.duplicates.length > 0" class="duplicates-warning">
-            <strong>⚠️ {{ importData.duplicates.length }} doublon(s) détecté(s)</strong>
-            <p class="duplicates-info">
-              Tous les enregistrements seront importés, même s'ils sont détectés comme doublons.
-            </p>
-          </div>
-          <div v-if="importData && !importValidated" class="import-options">
-            <label class="import-option">
-              <input 
-                type="checkbox" 
-                v-model="forceImport" 
-              />
-              <span>Forcer l'import (importer tous les enregistrements sans vérification de doublons)</span>
-            </label>
-          </div>
-        </div>
         <div class="modal-actions">
-          <button
-            v-if="importData && !importValidated"
-            @click="validateImport"
-            :disabled="validating"
-            class="btn-primary"
-          >
-            {{ validating ? 'Validation...' : 'Valider l\'import' }}
-          </button>
-          <button 
-            v-if="importData && !importValidated && forceImport"
-            @click="forceImportAll"
-            :disabled="importing"
-            class="btn-primary"
-          >
-            {{ importing ? 'Import en cours...' : 'Forcer l\'import de tous' }}
-          </button>
           <button @click="importCsv" :disabled="!selectedFile || importing" class="btn-primary">
             {{ importing ? 'Import...' : 'Importer' }}
           </button>
@@ -470,8 +439,24 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal modification en masse -->
+    <div v-if="showBulkStatusModal" class="modal" @click.self="showBulkStatusModal = false">
+      <div class="modal-content">
+        <h2>Modifier le statut ({{ selectedAdhesions.length }} adhésion(s))</h2>
+        <select v-model="bulkStatus" class="form-select">
+          <option value="actif">Actif</option>
+          <option value="expire">Expiré</option>
+          <option value="renouvele">Renouvelé</option>
+          <option value="a_generer">À générer</option>
+        </select>
+        <div class="modal-actions">
+          <button @click="applyBulkStatus" class="btn-primary">Appliquer</button>
+          <button @click="showBulkStatusModal = false" class="btn-cancel">Annuler</button>
+        </div>
+      </div>
+    </div>
   </div>
-  
 </template>
 
 <script setup lang="ts">
@@ -486,37 +471,25 @@ const saving = ref(false);
 const showFormModal = ref(false);
 const showImportModal = ref(false);
 const showSyncModal = ref(false);
+const showBulkStatusModal = ref(false);
 const editingAdhesion = ref<any>(null);
 const selectedFile = ref<File | null>(null);
 const importing = ref(false);
-const validating = ref(false);
-const importData = ref<any>(null);
-const importValidated = ref(false);
 const syncing = ref(false);
-const testingConnection = ref(false);
-const connectionTested = ref(false);
-const syncResult = ref<any>(null);
 const selectedAdhesions = ref<number[]>([]);
-const showBulkStatusModal = ref(false);
 const bulkStatus = ref('actif');
 const photoUrlInput = ref('');
 const photoPreview = ref<string | null>(null);
 const selectedPhotoFile = ref<File | null>(null);
-const forceImport = ref(false);
 const currentPage = ref(1);
 const totalPages = ref(1);
 const totalAdhesions = ref(0);
-const limitPerPage = 20;
+const limitPerPage = 50;
 const generatingCarte = ref<number | null>(null);
-const cartePreviews = ref<Record<number, any>>({});
+const showFilters = ref(false);
 
 const syncForm = ref({
   campaignId: '',
-  clientId: '',
-  clientSecret: '',
-  accessToken: '',
-  updateExisting: false,
-  skipDuplicates: true,
 });
 
 const filters = ref({
@@ -541,23 +514,185 @@ const formData = ref({
   photo_url: '',
 });
 
-const activeTab = ref('all');
 const availableYears = ref<number[]>([]);
 
-const tabs = computed(() => {
-  const currentYear = new Date().getFullYear();
-  return [
-    { id: 'all', label: 'Toutes', count: totalAdhesions.value },
-    { id: 'actif', label: 'Actives', count: undefined },
-    { id: 'a_generer', label: 'À vérifier', count: undefined },
-    { id: 'expire', label: 'Expirées', count: undefined },
-    { id: 'current_year', label: `Année ${currentYear}`, count: undefined },
-  ];
+const statuts = [
+  { value: 'actif', label: 'Actif', icon: 'check_circle' },
+  { value: 'expire', label: 'Expiré', icon: 'cancel' },
+  { value: 'renouvele', label: 'Renouvelé', icon: 'refresh' },
+  { value: 'a_generer', label: 'À générer', icon: 'pending' },
+];
+
+const moyensPaiement = [
+  { value: 'helloasso', label: 'HelloAsso', icon: 'language' },
+  { value: 'especes', label: 'Espèces', icon: 'monetization_on' },
+  { value: 'cheque', label: 'Chèque', icon: 'description' },
+  { value: 'cb', label: 'Carte bancaire', icon: 'credit_card' },
+  { value: 'virement', label: 'Virement', icon: 'account_balance' },
+];
+
+// Computed
+const adhesionsByYear = computed(() => {
+  const grouped: Record<number, any[]> = {};
+  
+  adhesions.value.forEach(adhesion => {
+    if (adhesion.date_adhesion) {
+      const year = new Date(adhesion.date_adhesion).getFullYear();
+      if (!grouped[year]) {
+        grouped[year] = [];
+      }
+      grouped[year].push(adhesion);
+    }
+  });
+
+  return Object.keys(grouped)
+    .map(year => ({
+      year: parseInt(year),
+      adhesions: grouped[parseInt(year)].sort((a, b) => 
+        new Date(b.date_adhesion).getTime() - new Date(a.date_adhesion).getTime()
+      )
+    }))
+    .sort((a, b) => b.year - a.year);
 });
+
+const activeFiltersCount = computed(() => {
+  let count = 0;
+  if (filters.value.annee) count++;
+  if (filters.value.statut) count++;
+  if (filters.value.moyen_paiement) count++;
+  if (filters.value.source) count++;
+  if (filters.value.helloasso_campaign_id) count++;
+  return count;
+});
+
+const hasActiveFilters = computed(() => activeFiltersCount.value > 0);
+
+// Fonctions
+function getImageUrl(photoUrl: string | null | undefined): string {
+  if (!photoUrl) return '';
+  if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
+    return photoUrl;
+  }
+  if (photoUrl.startsWith('/uploads/') || photoUrl.startsWith('uploads/')) {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    return photoUrl.startsWith('/uploads/') ? `${apiUrl}${photoUrl}` : `${apiUrl}/${photoUrl}`;
+  }
+  if (photoUrl.startsWith('data:') || photoUrl.startsWith('blob:')) {
+    return photoUrl;
+  }
+  return photoUrl;
+}
+
+function handleImageError(event: Event) {
+  const img = event.target as HTMLImageElement;
+  img.style.display = 'none';
+}
+
+function formatDate(date: string) {
+  if (!date) return 'Date invalide';
+  try {
+    return new Date(date).toLocaleDateString('fr-FR', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  } catch {
+    return 'Date invalide';
+  }
+}
+
+function formatPaymentMethod(moyen: string) {
+  const moyens: Record<string, string> = {
+    helloasso: 'HelloAsso',
+    especes: 'Espèces',
+    cheque: 'Chèque',
+    cb: 'Carte bancaire',
+    virement: 'Virement'
+  };
+  return moyens[moyen] || moyen;
+}
+
+function getPaymentIcon(moyen: string): string {
+  const icons: Record<string, string> = {
+    helloasso: 'language',
+    especes: 'monetization_on',
+    cheque: 'description',
+    cb: 'credit_card',
+    virement: 'account_balance',
+  };
+  return icons[moyen] || 'payments';
+}
+
+function formatStatut(statut: string) {
+  const statuts: Record<string, string> = {
+    actif: 'Actif',
+    expire: 'Expiré',
+    renouvele: 'Renouvelé',
+    a_generer: 'À générer',
+  };
+  return statuts[statut] || statut;
+}
+
+function getStatutIcon(statut: string): string {
+  const icons: Record<string, string> = {
+    actif: 'check_circle',
+    expire: 'cancel',
+    renouvele: 'refresh',
+    a_generer: 'pending',
+  };
+  return icons[statut] || 'help';
+}
+
+function isAdhesionComplete(adhesion: any): boolean {
+  return !!(adhesion.nom && adhesion.prenom && adhesion.email && adhesion.date_adhesion && adhesion.tarif);
+}
+
+function toggleStatutFilter(value: string) {
+  filters.value.statut = filters.value.statut === value ? '' : value;
+  applyFilters();
+}
+
+function toggleMoyenPaiementFilter(value: string) {
+  filters.value.moyen_paiement = filters.value.moyen_paiement === value ? '' : value;
+  applyFilters();
+}
+
+function toggleSourceFilter(value: string) {
+  filters.value.source = filters.value.source === value ? '' : value;
+  applyFilters();
+}
+
+function resetFilters() {
+  filters.value = {
+    search: '',
+    annee: '',
+    statut: '',
+    moyen_paiement: '',
+    source: '',
+    helloasso_campaign_id: '',
+  };
+  applyFilters();
+}
+
+function applyFilters() {
+  loadAdhesions(1);
+}
+
+function clearSearch() {
+  filters.value.search = '';
+  applyFilters();
+}
+
+let searchTimeout: NodeJS.Timeout;
+function debounceSearch() {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    applyFilters();
+  }, 300);
+}
 
 async function loadAvailableYears() {
   try {
-    // Charger toutes les adhésions pour extraire les années disponibles
     const response = await adhesionsApi.list({ limit: '10000' });
     const allAdhesions = response.data.data || response.data || [];
     const yearsSet = new Set<number>();
@@ -572,7 +707,6 @@ async function loadAvailableYears() {
     availableYears.value = Array.from(yearsSet).sort((a, b) => b - a);
   } catch (error) {
     console.error('Erreur lors du chargement des années:', error);
-    // Fallback : années récentes
     const currentYear = new Date().getFullYear();
     availableYears.value = [];
     for (let i = currentYear; i >= currentYear - 10; i--) {
@@ -581,176 +715,56 @@ async function loadAvailableYears() {
   }
 }
 
-function handleYearChange() {
-  loadAdhesions(1);
-}
-
-function handleTabChange() {
-  // Appliquer le filtre selon l'onglet actif
-  if (activeTab.value === 'all') {
-    filters.value.statut = '';
-    filters.value.annee = '';
-  } else if (activeTab.value === 'actif') {
-    filters.value.statut = 'actif';
-    filters.value.annee = '';
-  } else if (activeTab.value === 'a_generer') {
-    filters.value.statut = 'a_generer';
-    filters.value.annee = '';
-  } else if (activeTab.value === 'expire') {
-    filters.value.statut = 'expire';
-    filters.value.annee = '';
-  } else if (activeTab.value === 'current_year') {
-    filters.value.annee = new Date().getFullYear().toString();
-    filters.value.statut = '';
-  }
-  loadAdhesions(1);
-}
-
-function isAdhesionComplete(adhesion: any): boolean {
-  // Vérifier que tous les champs requis sont remplis (email non requis)
-  return !!(
-    adhesion.nom &&
-    adhesion.nom.trim() !== '' &&
-    adhesion.nom !== 'Sans nom' &&
-    adhesion.prenom &&
-    adhesion.prenom.trim() !== '' &&
-    adhesion.prenom !== 'Sans prénom' &&
-    adhesion.photo_url &&
-    adhesion.tarif &&
-    adhesion.tarif > 0 &&
-    adhesion.moyen_paiement &&
-    adhesion.date_adhesion &&
-    adhesion.statut
-  );
-}
-
-function formatCarteStatut(statut: string) {
-  const statusMap: Record<string, string> = {
-    a_generer: 'À générer',
-    generee: 'Générée',
-    a_remettre: 'À remettre',
-    remise: 'Remise',
-  };
-  return statusMap[statut] || statut;
-}
-
-async function generateCarteForAdhesion(adhesion: any) {
-  if (!isAdhesionComplete(adhesion)) {
-    alert('Cette adhésion n\'est pas complète. Veuillez remplir tous les champs requis.');
-    return;
-  }
-
-  generatingCarte.value = adhesion.id;
+async function loadAdhesions(page: number = 1) {
+  loading.value = true;
+  currentPage.value = page;
   try {
-    await cartesApi.generate(adhesion.id);
-    await loadAdhesions(currentPage.value);
-    alert('Carte générée avec succès !');
+    const params: any = {
+      limit: limitPerPage.toString(),
+      page: page.toString(),
+    };
+    if (filters.value.search) params.search = filters.value.search;
+    if (filters.value.annee) params.annee = filters.value.annee;
+    if (filters.value.statut) params.statut = filters.value.statut;
+    if (filters.value.moyen_paiement) params.moyen_paiement = filters.value.moyen_paiement;
+    if (filters.value.source) params.source = filters.value.source;
+    if (filters.value.helloasso_campaign_id) params.helloasso_campaign_id = filters.value.helloasso_campaign_id;
+
+    console.log('📡 Chargement des adhésions avec params:', params);
+    const response = await adhesionsApi.list(params);
+    console.log('✅ Réponse reçue:', response);
+    console.log('📦 Données:', response.data);
+    
+    // Gérer différentes structures de réponse
+    let adhesionsData = [];
+    if (response.data) {
+      if (Array.isArray(response.data)) {
+        adhesionsData = response.data;
+      } else if (response.data.data && Array.isArray(response.data.data)) {
+        adhesionsData = response.data.data;
+      } else if (response.data.data && !Array.isArray(response.data.data)) {
+        adhesionsData = [response.data.data];
+      }
+    }
+    
+    adhesions.value = adhesionsData;
+    console.log('✅ Adhésions chargées:', adhesions.value.length);
+    
+    const pagination = response.data?.pagination || {};
+    totalAdhesions.value = pagination.total || adhesions.value.length;
+    totalPages.value = Math.ceil(totalAdhesions.value / limitPerPage);
   } catch (error: any) {
-    console.error('Erreur lors de la génération de la carte:', error);
-    alert(error.response?.data?.error || 'Erreur lors de la génération de la carte');
+    console.error('❌ Erreur lors du chargement des adhésions:', error);
+    console.error('❌ Détails:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+      config: error.config
+    });
+    alert(error.response?.data?.error || error.userMessage || error.message || 'Erreur lors du chargement des adhésions');
+    adhesions.value = [];
   } finally {
-    generatingCarte.value = null;
-  }
-}
-
-async function viewCartePreview(carteId: number) {
-  try {
-    const response = await cartesApi.preview(carteId);
-    const carte = response.data.data || response.data;
-    alert(`Carte #${carte.numero_carte}\nStatut: ${formatCarteStatut(carte.statut)}\nAdhérent: ${carte.prenom} ${carte.nom}`);
-  } catch (error: any) {
-    console.error('Erreur lors de la prévisualisation:', error);
-    alert('Erreur lors de la prévisualisation de la carte');
-  }
-}
-
-function formatDate(date: string) {
-  return new Date(date).toLocaleDateString('fr-FR');
-}
-
-function formatStatus(statut: string) {
-  const statusMap: Record<string, string> = {
-    actif: 'Actif',
-    expire: 'Expiré',
-    renouvele: 'Renouvelé',
-  };
-  return statusMap[statut] || statut;
-}
-
-function formatPaymentMethod(moyenPaiement: string) {
-  const paymentMap: Record<string, string> = {
-    helloasso: 'HelloAsso',
-    especes: 'Espèces',
-    cheque: 'Chèque',
-    cb: 'Carte Bancaire',
-    virement: 'Virement',
-  };
-  return paymentMap[moyenPaiement] || moyenPaiement || 'Non défini';
-}
-
-const allSelected = computed(() => {
-  return adhesions.value.length > 0 && selectedAdhesions.value.length === adhesions.value.length;
-});
-
-function toggleSelectAll() {
-  if (allSelected.value) {
-    selectedAdhesions.value = [];
-  } else {
-    selectedAdhesions.value = adhesions.value.map(a => a.id);
-  }
-}
-
-async function updateStatus(adhesionId: number, newStatus: string) {
-  try {
-    const adhesion = adhesions.value.find(a => a.id === adhesionId);
-    if (!adhesion) return;
-
-    await adhesionsApi.update(adhesionId, {
-      ...adhesion,
-      statut: newStatus,
-    });
-    
-    // Mettre à jour localement
-    adhesion.statut = newStatus;
-    
-    // Recharger pour vérifier si on peut générer une carte
-    await loadAdhesions(currentPage.value);
-  } catch (error: any) {
-    console.error('Erreur lors de la mise à jour du statut:', error);
-    alert(error.response?.data?.error || 'Erreur lors de la mise à jour du statut');
-    // Recharger pour restaurer l'état précédent
-    await loadAdhesions(currentPage.value);
-  }
-}
-
-async function updateBulkStatus() {
-  if (selectedAdhesions.value.length === 0) {
-    alert('Veuillez sélectionner au moins une adhésion');
-    return;
-  }
-
-  if (!confirm(`Modifier le statut de ${selectedAdhesions.value.length} adhésion(s) en "${formatStatus(bulkStatus.value)}" ?`)) {
-    return;
-  }
-
-  try {
-    const updates = selectedAdhesions.value.map(id => {
-      const adhesion = adhesions.value.find(a => a.id === id);
-      if (!adhesion) return null;
-      return adhesionsApi.update(id, {
-        ...adhesion,
-        statut: bulkStatus.value,
-      });
-    });
-
-    await Promise.all(updates.filter(Boolean));
-    selectedAdhesions.value = [];
-    showBulkStatusModal.value = false;
-    await loadAdhesions(1);
-    alert(`Statut mis à jour pour ${updates.length} adhésion(s) !`);
-  } catch (error: any) {
-    console.error('Erreur lors de la mise à jour en masse:', error);
-    alert(error.response?.data?.error || 'Erreur lors de la mise à jour en masse');
+    loading.value = false;
   }
 }
 
@@ -769,10 +783,14 @@ function openCreateModal() {
     helloasso_campaign_id: '',
     photo_url: '',
   };
-  photoUrlInput.value = '';
   photoPreview.value = null;
+  photoUrlInput.value = '';
   selectedPhotoFile.value = null;
   showFormModal.value = true;
+}
+
+function closeFormModal() {
+  showFormModal.value = false;
 }
 
 function editAdhesion(adhesion: any) {
@@ -782,7 +800,7 @@ function editAdhesion(adhesion: any) {
     prenom: adhesion.prenom || '',
     email: adhesion.email || '',
     telephone: adhesion.telephone || '',
-    date_adhesion: adhesion.date_adhesion ? (adhesion.date_adhesion.includes('T') ? adhesion.date_adhesion.split('T')[0] : adhesion.date_adhesion) : new Date().toISOString().split('T')[0],
+    date_adhesion: adhesion.date_adhesion ? new Date(adhesion.date_adhesion).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
     tarif: adhesion.tarif || 0,
     moyen_paiement: adhesion.moyen_paiement || 'helloasso',
     statut: adhesion.statut || 'actif',
@@ -790,153 +808,34 @@ function editAdhesion(adhesion: any) {
     helloasso_campaign_id: adhesion.helloasso_campaign_id || '',
     photo_url: adhesion.photo_url || '',
   };
-  photoUrlInput.value = adhesion.photo_url || '';
-  photoPreview.value = adhesion.photo_url || null;
+  photoPreview.value = null;
+  photoUrlInput.value = '';
   selectedPhotoFile.value = null;
   showFormModal.value = true;
-}
-
-function closeFormModal() {
-  showFormModal.value = false;
-  editingAdhesion.value = null;
-  photoUrlInput.value = '';
-  photoPreview.value = null;
-  selectedPhotoFile.value = null;
-}
-
-function handlePhotoFileSelect(event: Event) {
-  const target = event.target as HTMLInputElement;
-  if (target.files && target.files[0]) {
-    const file = target.files[0];
-    selectedPhotoFile.value = file;
-    
-    // Créer une preview locale
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      photoPreview.value = e.target?.result as string;
-      formData.value.photo_url = e.target?.result as string; // Utiliser la preview temporairement
-    };
-    reader.readAsDataURL(file);
-  }
-}
-
-function updatePhotoFromUrl() {
-  if (photoUrlInput.value) {
-    photoPreview.value = photoUrlInput.value;
-    formData.value.photo_url = photoUrlInput.value;
-  } else {
-    photoPreview.value = null;
-    formData.value.photo_url = '';
-  }
-}
-
-function clearPhoto() {
-  photoUrlInput.value = '';
-  photoPreview.value = null;
-  selectedPhotoFile.value = null;
-  formData.value.photo_url = '';
-  
-  // Réinitialiser l'input file
-  const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-  if (fileInput) {
-    fileInput.value = '';
-  }
-}
-
-// Fonction pour construire l'URL complète de l'image
-function getImageUrl(photoUrl: string | null | undefined): string {
-  if (!photoUrl) return '';
-  
-  // Si c'est déjà une URL complète (http/https), retourner tel quel
-  if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
-    return photoUrl;
-  }
-  
-  // Si c'est une URL locale (uploads), construire l'URL complète
-  if (photoUrl.startsWith('/uploads/') || photoUrl.startsWith('uploads/')) {
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-    return photoUrl.startsWith('/uploads/') ? `${apiUrl}${photoUrl}` : `${apiUrl}/${photoUrl}`;
-  }
-  
-  // Si c'est un data URL ou blob, retourner tel quel
-  if (photoUrl.startsWith('data:') || photoUrl.startsWith('blob:')) {
-    return photoUrl;
-  }
-  
-  return photoUrl;
-}
-
-function handleImageError(event: Event) {
-  const img = event.target as HTMLImageElement;
-  console.error('❌ Erreur de chargement de l\'image:', img.src);
-  img.style.display = 'none';
-}
-
-function onImageCropped(dataUrl: string) {
-  // Cette fonction n'est plus utilisée mais conservée pour compatibilité
-  if (!dataUrl) {
-    return;
-  }
-  
-  try {
-    photoPreview.value = dataUrl;
-    formData.value.photo_url = dataUrl;
-    
-    // Convertir dataUrl en File pour l'upload
-    fetch(dataUrl)
-      .then(res => res.blob())
-      .then(blob => {
-        const file = new File([blob], 'photo-cropped.jpg', { type: 'image/jpeg' });
-        selectedPhotoFile.value = file;
-        console.log('✅ Fichier créé pour upload:', file.name, file.size, 'bytes');
-      })
-      .catch(error => {
-        console.error('❌ Erreur lors de la conversion en fichier:', error);
-      });
-  } catch (error) {
-    console.error('❌ Erreur dans onImageCropped:', error);
-  }
 }
 
 async function saveAdhesion() {
   saving.value = true;
   try {
-    // Si on a un fichier photo, l'envoyer avec le formulaire
-    // Sinon, utiliser l'URL si elle a été saisie
-    const photoFile = selectedPhotoFile.value;
-    const photoUrl = photoUrlInput.value.trim();
+    const formDataToSend = new FormData();
+    Object.keys(formData.value).forEach(key => {
+      if (key !== 'photo_url' || !selectedPhotoFile.value) {
+        formDataToSend.append(key, (formData.value as any)[key]);
+      }
+    });
     
-    // Préparer les données à envoyer
-    const dataToSend = { ...formData.value };
-    
-    // Si on a un fichier, ne pas envoyer photo_url (le backend le gérera)
-    // Si on a une URL mais pas de fichier, utiliser l'URL
-    if (photoFile) {
-      // Ne pas inclure photo_url si on upload un fichier
-      delete dataToSend.photo_url;
-    } else if (photoUrl) {
-      dataToSend.photo_url = photoUrl;
-    } else {
-      // Si on n'a ni fichier ni URL, ne pas envoyer photo_url
-      delete dataToSend.photo_url;
+    if (selectedPhotoFile.value) {
+      formDataToSend.append('photo', selectedPhotoFile.value);
     }
-    
-    let response;
+
     if (editingAdhesion.value) {
-      // Mise à jour
-      response = await adhesionsApi.update(editingAdhesion.value.id, dataToSend, photoFile || undefined);
+      await adhesionsApi.update(editingAdhesion.value.id, formDataToSend);
     } else {
-      // Création
-      response = await adhesionsApi.create(dataToSend, photoFile || undefined);
+      await adhesionsApi.create(formDataToSend);
     }
-    
-    console.log('✅ Réponse sauvegarde:', response?.data);
-    console.log('📷 photo_url retournée:', response?.data?.data?.photo_url);
     
     closeFormModal();
-    // Recharger les adhésions pour avoir les données à jour (y compris la nouvelle photo_url)
     await loadAdhesions(currentPage.value);
-    alert(editingAdhesion.value ? 'Adhésion modifiée avec succès !' : 'Adhésion créée avec succès !');
   } catch (error: any) {
     console.error('Erreur lors de la sauvegarde:', error);
     alert(error.response?.data?.error || 'Erreur lors de la sauvegarde');
@@ -945,8 +844,38 @@ async function saveAdhesion() {
   }
 }
 
+function handlePhotoFileSelect(event: Event) {
+  const input = event.target as HTMLInputElement;
+  if (input.files && input.files[0]) {
+    selectedPhotoFile.value = input.files[0];
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      photoPreview.value = e.target?.result as string;
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+function updatePhotoFromUrl() {
+  if (photoUrlInput.value) {
+    photoPreview.value = photoUrlInput.value;
+    formData.value.photo_url = photoUrlInput.value;
+  }
+}
+
+function clearPhoto() {
+  photoPreview.value = null;
+  photoUrlInput.value = '';
+  selectedPhotoFile.value = null;
+  formData.value.photo_url = '';
+}
+
+function viewDetails(id: number) {
+  router.push(`/app/adhesions/${id}`);
+}
+
 function confirmDelete(adhesion: any) {
-  if (confirm(`Êtes-vous sûr de vouloir supprimer l'adhésion de ${adhesion.nom} ${adhesion.prenom} ?`)) {
+  if (confirm(`Êtes-vous sûr de vouloir supprimer l'adhésion de ${adhesion.prenom} ${adhesion.nom} ?`)) {
     deleteAdhesion(adhesion.id);
   }
 }
@@ -954,196 +883,98 @@ function confirmDelete(adhesion: any) {
 async function deleteAdhesion(id: number) {
   try {
     await adhesionsApi.delete(id);
-    await loadAdhesions(1);
-    alert('Adhésion supprimée avec succès !');
+    await loadAdhesions(currentPage.value);
   } catch (error: any) {
     console.error('Erreur lors de la suppression:', error);
     alert(error.response?.data?.error || 'Erreur lors de la suppression');
   }
 }
 
-function viewDetails(id: number) {
-  router.push(`/app/adhesions/${id}`);
-}
-
-async function loadAdhesions(page: number = 1) {
-  loading.value = true;
-  currentPage.value = page;
-  try {
-    const params: any = {
-      limit: limitPerPage.toString(),
-      page: page.toString(),
-    };
-    if (filters.value.search) params.search = filters.value.search;
-    if (filters.value.annee) params.annee = filters.value.annee;
-    if (filters.value.statut) params.statut = filters.value.statut;
-    if (filters.value.moyen_paiement) params.moyen_paiement = filters.value.moyen_paiement;
-    if (filters.value.helloasso_campaign_id) params.helloasso_campaign_id = filters.value.helloasso_campaign_id;
-
-    const response = await adhesionsApi.list(params);
-    adhesions.value = response.data.data || response.data || [];
-    
-    // Mettre à jour la pagination
-    const pagination = response.data.pagination || {};
-    totalAdhesions.value = pagination.total || adhesions.value.length;
-    totalPages.value = Math.ceil(totalAdhesions.value / limitPerPage);
-    
-    console.log(`✅ Page ${page}: ${adhesions.value.length} adhésion(s) sur ${totalAdhesions.value} total`);
-    if (adhesions.value.length > 0) {
-      console.log('📷 Exemple photo_url:', adhesions.value[0]?.photo_url);
-      console.log('📷 URL construite:', adhesions.value[0]?.photo_url ? getImageUrl(adhesions.value[0].photo_url) : 'aucune');
-    }
-    
-    // Générer automatiquement les cartes pour les adhésions complètes sans carte
-    await autoGenerateCartesForCompleteAdhesions();
-  } catch (error: any) {
-    console.error('Erreur lors du chargement des adhésions:', error);
-    if (error.response?.data?.error) {
-      alert(error.response.data.error);
-    }
-  } finally {
-    loading.value = false;
-  }
-}
-
-async function autoGenerateCartesForCompleteAdhesions() {
-  // Trouver les adhésions complètes sans carte
-  const completeAdhesionsWithoutCarte = adhesions.value.filter(
-    (adhesion: any) => isAdhesionComplete(adhesion) && !adhesion.carte_id
-  );
-
-  if (completeAdhesionsWithoutCarte.length === 0) {
+async function generateCarteForAdhesion(adhesion: any) {
+  if (!isAdhesionComplete(adhesion)) {
+    alert('L\'adhésion doit être complète pour générer une carte');
     return;
   }
-
-  console.log(`🔄 Génération automatique de ${completeAdhesionsWithoutCarte.length} carte(s)...`);
-
-  let generatedCount = 0;
   
-  // Générer les cartes une par une pour éviter de surcharger le serveur
-  for (const adhesion of completeAdhesionsWithoutCarte) {
-    if (generatingCarte.value === adhesion.id) {
-      continue; // Déjà en cours de génération
-    }
-
-    try {
-      generatingCarte.value = adhesion.id;
-      const response = await cartesApi.generate(adhesion.id);
-      console.log(`✅ Carte générée pour ${adhesion.prenom} ${adhesion.nom}:`, response.data);
-      generatedCount++;
-      
-      // Mettre à jour localement l'adhesion pour afficher la carte
-      const adhesionIndex = adhesions.value.findIndex((a: any) => a.id === adhesion.id);
-      if (adhesionIndex !== -1) {
-        // Recharger cette adhésion spécifique depuis le serveur pour obtenir les infos de carte
-        try {
-          const updatedResponse = await adhesionsApi.get(adhesion.id);
-          const updatedAdhesion = updatedResponse.data.data || updatedResponse.data;
-          // Récupérer aussi les infos de carte depuis la liste des adhésions
-          const adhesionsResponse = await adhesionsApi.list({ 
-            limit: '10000',
-            page: '1'
-          });
-          const allAdhesions = adhesionsResponse.data.data || adhesionsResponse.data || [];
-          const updatedAdhesionWithCarte = allAdhesions.find((a: any) => a.id === adhesion.id);
-          if (updatedAdhesionWithCarte) {
-            adhesions.value[adhesionIndex] = { ...adhesions.value[adhesionIndex], ...updatedAdhesionWithCarte };
-          } else {
-            adhesions.value[adhesionIndex] = { ...adhesions.value[adhesionIndex], ...updatedAdhesion };
-          }
-        } catch (updateError) {
-          console.warn('Erreur lors de la mise à jour de l\'affichage:', updateError);
-          // Recharger toute la page si la mise à jour individuelle échoue
-          await loadAdhesions(currentPage.value);
-        }
-      }
-    } catch (error: any) {
-      console.error(`❌ Erreur génération carte pour ${adhesion.prenom} ${adhesion.nom}:`, error);
-      const errorMessage = error.response?.data?.error || error.message || 'Erreur inconnue';
-      console.error('Détails de l\'erreur:', errorMessage);
-      // Ne pas bloquer les autres générations en cas d'erreur
-    } finally {
-      generatingCarte.value = null;
-    }
+  generatingCarte.value = adhesion.id;
+  try {
+    await cartesApi.generate(adhesion.id);
+    await loadAdhesions(currentPage.value);
+  } catch (error: any) {
+    console.error('Erreur lors de la génération:', error);
+    alert(error.response?.data?.error || 'Erreur lors de la génération de la carte');
+  } finally {
+    generatingCarte.value = null;
   }
+}
 
-  if (generatedCount > 0) {
-    console.log(`✅ ${generatedCount} carte(s) générée(s) automatiquement`);
+async function applyBulkStatus() {
+  try {
+    for (const id of selectedAdhesions.value) {
+      await adhesionsApi.update(id, { statut: bulkStatus.value } as any);
+    }
+    selectedAdhesions.value = [];
+    showBulkStatusModal.value = false;
+    await loadAdhesions(currentPage.value);
+  } catch (error: any) {
+    console.error('Erreur lors de la modification en masse:', error);
+    alert(error.response?.data?.error || 'Erreur lors de la modification en masse');
+  }
+}
+
+function closeSyncModal() {
+  showSyncModal.value = false;
+  syncForm.value = { campaignId: '' };
+}
+
+async function syncHelloAsso() {
+  syncing.value = true;
+  try {
+    const response = await adhesionsApi.syncHelloAsso(syncForm.value);
+    alert(`Synchronisation terminée !\n\nCréées: ${response.data.stats?.created || 0}\nMises à jour: ${response.data.stats?.updated || 0}`);
+    closeSyncModal();
+    await loadAdhesions(1);
+  } catch (error: any) {
+    console.error('Erreur lors de la synchronisation:', error);
+    alert(error.response?.data?.error || 'Erreur lors de la synchronisation');
+  } finally {
+    syncing.value = false;
   }
 }
 
 function handleFileSelect(event: Event) {
-  const target = event.target as HTMLInputElement;
-  if (target.files && target.files[0]) {
-    selectedFile.value = target.files[0];
+  const input = event.target as HTMLInputElement;
+  if (input.files && input.files[0]) {
+    selectedFile.value = input.files[0];
   }
 }
 
 async function importCsv() {
   if (!selectedFile.value) return;
-
+  
   importing.value = true;
   try {
-    const response = await adhesionsApi.import(selectedFile.value);
-    importData.value = response.data;
-    importValidated.value = false;
-  } catch (error: any) {
-    alert(error.response?.data?.error || 'Erreur lors de l\'import');
-  } finally {
-    importing.value = false;
-  }
-}
-
-async function validateImport() {
-  if (!importData.value?.importId) return;
-
-  validating.value = true;
-  try {
-    await adhesionsApi.validateImport(importData.value.importId, {
-      records: importData.value.records,
-      duplicateActions: [],
-    });
-    importValidated.value = true;
+    const formData = new FormData();
+    formData.append('csv', selectedFile.value);
+    const response = await adhesionsApi.importCsv(formData);
+    
+    // Si l'import nécessite une validation
+    if (response.data.importId) {
+      // Valider automatiquement l'import
+      await adhesionsApi.validateImport(response.data.importId, {
+        records: response.data.records,
+        duplicateActions: {},
+        forceUpdate: true
+      });
+    }
+    
+    alert('Import réussi !');
     showImportModal.value = false;
     selectedFile.value = null;
-    importData.value = null;
-    forceImport.value = false;
     await loadAdhesions(1);
-    alert('Import validé avec succès !');
   } catch (error: any) {
-    alert(error.response?.data?.error || 'Erreur lors de la validation');
-  } finally {
-    validating.value = false;
-  }
-}
-
-async function forceImportAll() {
-  if (!importData.value?.importId || !importData.value?.records) return;
-
-  importing.value = true;
-  try {
-    // Importer tous les enregistrements en ignorant les doublons
-    const response = await adhesionsApi.validateImport(importData.value.importId, {
-      records: importData.value.records,
-      duplicateActions: [],
-      forceUpdate: true,
-    });
-    
-    const stats = response.data;
-    importValidated.value = true;
-    showImportModal.value = false;
-    selectedFile.value = null;
-    importData.value = null;
-    forceImport.value = false;
-    await loadAdhesions(1);
-    
-    alert(`✅ Import terminé !\n\n` +
-      `✅ ${stats.inserted || 0} nouveau(x) enregistrement(s) importé(s)\n` +
-      `⏭️ ${stats.skipped || 0} doublon(s) ignoré(s)\n` +
-      `📝 ${stats.updated || 0} enregistrement(s) mis à jour`);
-  } catch (error: any) {
-    console.error('Erreur import forcé:', error);
-    alert(error.response?.data?.error || 'Erreur lors de l\'import forcé');
+    console.error('Erreur lors de l\'import:', error);
+    alert(error.response?.data?.error || error.userMessage || 'Erreur lors de l\'import');
   } finally {
     importing.value = false;
   }
@@ -1155,475 +986,646 @@ async function exportCsv() {
     if (filters.value.annee) params.annee = filters.value.annee;
     if (filters.value.statut) params.statut = filters.value.statut;
     if (filters.value.moyen_paiement) params.moyen_paiement = filters.value.moyen_paiement;
-    if (filters.value.helloasso_campaign_id) params.helloasso_campaign_id = filters.value.helloasso_campaign_id;
-
-    const response = await adhesionsApi.export(params);
-    const blob = new Blob([response.data]);
+    if (filters.value.source) params.source = filters.value.source;
+    
+    const response = await adhesionsApi.exportCsv(params);
+    const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `adhesions-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `adhesions_${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
-  } catch (error) {
-    alert('Erreur lors de l\'export');
-  }
-}
-
-async function testConnection() {
-  if (!syncForm.value.campaignId) {
-    alert('Veuillez saisir l\'ID de la campagne HelloAsso');
-    return;
-  }
-
-  testingConnection.value = true;
-  try {
-    const response = await adhesionsApi.testHelloAssoConnection({
-      campaignId: syncForm.value.campaignId,
-      clientId: syncForm.value.clientId || undefined,
-      clientSecret: syncForm.value.clientSecret || undefined,
-      accessToken: syncForm.value.accessToken || undefined,
-    });
-    
-    connectionTested.value = true;
-    alert(`✅ Connexion réussie !\n\nCampagne: ${response.data.campaignId}\nTotal adhésions: ${response.data.totalItems}`);
+    window.URL.revokeObjectURL(url);
   } catch (error: any) {
-    console.error('Erreur test connexion:', error);
-    alert(error.response?.data?.error || error.response?.data?.details || 'Erreur de connexion à HelloAsso');
-    connectionTested.value = false;
-  } finally {
-    testingConnection.value = false;
+    console.error('Erreur lors de l\'export:', error);
+    alert(error.response?.data?.error || error.userMessage || 'Erreur lors de l\'export');
   }
 }
 
-async function syncHelloAsso() {
-  if (!syncForm.value.campaignId) {
-    alert('Veuillez saisir l\'ID de la campagne HelloAsso');
-    return;
-  }
-
-  syncing.value = true;
-  syncResult.value = null;
-  try {
-    const response = await adhesionsApi.syncHelloAsso({
-      campaignId: syncForm.value.campaignId,
-      clientId: syncForm.value.clientId || undefined,
-      clientSecret: syncForm.value.clientSecret || undefined,
-      accessToken: syncForm.value.accessToken || undefined,
-      updateExisting: syncForm.value.updateExisting,
-      skipDuplicates: syncForm.value.skipDuplicates,
-    });
-    
-    syncResult.value = response.data;
-    await loadAdhesions(1);
-    
-    alert(`✅ Synchronisation terminée !\n\nCréées: ${response.data.stats.created}\nMises à jour: ${response.data.stats.updated}\nIgnorées: ${response.data.stats.skipped}`);
-  } catch (error: any) {
-    console.error('Erreur synchronisation:', error);
-    alert(error.response?.data?.error || error.response?.data?.details || 'Erreur lors de la synchronisation');
-  } finally {
-    syncing.value = false;
-  }
-}
-
-function closeSyncModal() {
-  showSyncModal.value = false;
-  syncForm.value = {
-    campaignId: '',
-    clientId: '',
-    clientSecret: '',
-    accessToken: '',
-    updateExisting: false,
-    skipDuplicates: true,
-  };
-  connectionTested.value = false;
-  syncResult.value = null;
-}
-
-watch(activeTab, handleTabChange);
-
-onMounted(() => {
-  loadAvailableYears();
-  loadAdhesions(1);
+onMounted(async () => {
+  await loadAvailableYears();
+  await loadAdhesions(1);
 });
 </script>
 
 <style scoped>
-.adhesions {
+.adhesions-modern {
   width: 100%;
+  padding: 0;
 }
 
-.header {
+/* Header */
+.page-header {
+  background: white;
+  padding: 24px 30px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
 }
 
-.header h1 {
+.page-header h1 {
   margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #2c3e50;
 }
 
-.actions {
+.header-actions {
   display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
+  gap: 12px;
+  align-items: center;
+}
+
+.btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  background: white;
+  color: #667eea;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-icon:hover {
+  background: #f5f7fa;
+  border-color: #667eea;
 }
 
 .btn-primary {
-  padding: 12px 24px;
-  background-color: #667eea;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #667eea;
   color: white;
   border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 16px;
+  border-radius: 8px;
   font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
 .btn-primary:hover {
-  background-color: #5568d3;
+  background: #5568d3;
+}
+
+/* Search bar */
+.search-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.search-input-wrapper {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 16px;
+  color: #7f8c8d;
+  pointer-events: none;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 16px 12px 48px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.clear-search {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  color: #7f8c8d;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.btn-filters:hover,
+.btn-filters.active {
+  border-color: #667eea;
+  color: #667eea;
+}
+
+.filter-badge {
+  background: #667eea;
+  color: white;
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 20px;
+  text-align: center;
+}
+
+/* Filters panel */
+.filters-panel {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.filters-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.filter-group label {
+  display: block;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.filter-group select,
+.filter-group input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #f5f7fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 13px;
+}
+
+.chip:hover {
+  background: #e8ecf1;
+}
+
+.chip.active {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
+.chip .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.filter-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
 }
 
 .btn-secondary {
-  padding: 12px 24px;
-  background-color: #95a5a6;
-  color: white;
-  border: none;
-  border-radius: 5px;
+  padding: 10px 20px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 16px;
+  transition: all 0.2s;
+  font-size: 14px;
 }
 
 .btn-secondary:hover {
-  background-color: #7f8c8d;
+  background: #f5f7fa;
 }
 
-.btn-sync {
-  padding: 12px 24px;
-  background-color: #27ae60;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 16px;
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+/* Stats bar */
+.stats-bar {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 16px 24px;
+  background: white;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #667eea;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #7f8c8d;
+  text-transform: uppercase;
+}
+
+.bulk-actions {
+  margin-left: auto;
+}
+
+/* Year groups */
+.year-group {
+  margin-bottom: 40px;
+}
+
+.year-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.year-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.year-title .material-symbols-outlined {
+  color: #667eea;
+}
+
+.year-count {
+  font-size: 14px;
+  color: #7f8c8d;
   font-weight: 500;
 }
 
-.btn-sync:hover {
-  background-color: #229954;
+/* Cards grid */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
 }
 
-.filters {
+.adhesion-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s;
+  position: relative;
+  border: 2px solid transparent;
+}
+
+.adhesion-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.adhesion-card.selected {
+  border-color: #667eea;
+  background: #f8f9ff;
+}
+
+.card-checkbox {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+
+.card-header {
   display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
-.filters input,
-.filters select {
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  min-width: 150px;
+.card-photo {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #f5f7fa;
 }
 
-.table-wrapper {
+.card-photo img {
   width: 100%;
-  overflow-x: auto;
-  overflow-y: visible;
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  height: 100%;
+  object-fit: cover;
 }
 
-.data-table {
+.photo-placeholder {
   width: 100%;
-  min-width: 1200px;
-  border-collapse: collapse;
-  background: white;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #7f8c8d;
 }
 
-.data-table thead {
-  background-color: #2c3e50;
-  color: white;
-  position: sticky;
-  top: 0;
-  z-index: 10;
+.photo-placeholder .material-symbols-outlined {
+  font-size: 32px;
 }
 
-.data-table th {
-  padding: 12px 10px;
-  text-align: left;
+.card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.card-name {
+  margin: 0 0 4px 0;
+  font-size: 16px;
   font-weight: 600;
-  font-size: 0.9em;
+  color: #2c3e50;
   white-space: nowrap;
-}
-
-.data-table th:first-child {
-  min-width: 50px;
-  width: 50px;
-}
-
-.data-table th:nth-child(2) {
-  min-width: 150px;
-}
-
-.data-table th:nth-child(3) {
-  min-width: 120px;
-}
-
-.data-table th:nth-child(4) {
-  min-width: 180px;
-}
-
-.data-table th:nth-child(5) {
-  min-width: 110px;
-}
-
-.data-table th:nth-child(6) {
-  min-width: 100px;
-}
-
-.data-table th:nth-child(7) {
-  min-width: 160px;
-}
-
-.data-table th:nth-child(8) {
-  min-width: 120px;
-}
-
-.data-table th:nth-child(9) {
-  min-width: 150px;
-}
-
-.data-table td {
-  padding: 10px;
-  text-align: left;
-  font-size: 0.9em;
-  white-space: nowrap;
-  vertical-align: middle;
-  max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.data-table tbody tr {
-  border-bottom: 1px solid #eee;
-}
-
-.data-table tbody tr:hover {
-  background-color: #f9f9f9;
-}
-
-.actions-cell {
-  min-width: 120px;
-  max-width: 150px;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 5px;
-  align-items: center;
-  justify-content: flex-start;
+.card-email {
+  margin: 0;
+  font-size: 13px;
+  color: #7f8c8d;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.btn-action {
-  padding: 6px 10px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.85em;
+.card-body {
+  margin-bottom: 16px;
+}
+
+.card-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.detail-item {
   display: flex;
   align-items: center;
-  justify-content: center;
-  white-space: nowrap;
-  min-width: 32px;
-  height: 32px;
-  color: white;
-  transition: all 0.2s;
+  gap: 8px;
+  font-size: 13px;
+  color: #555;
 }
 
-.btn-action .icon {
-  font-size: 14px;
+.detail-item .material-symbols-outlined {
+  font-size: 18px;
+  color: #667eea;
 }
 
-.btn-action .text {
-  display: none;
-}
-
-.btn-action:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.btn-action:active {
-  transform: translateY(0);
-}
-
-.btn-view {
-  background-color: #3498db;
-}
-
-.btn-view:hover {
-  background-color: #2980b9;
-}
-
-.btn-edit {
-  background-color: #f39c12;
-}
-
-.btn-edit:hover {
-  background-color: #e67e22;
-}
-
-.btn-delete {
-  background-color: #e74c3c;
-}
-
-.btn-delete:hover {
-  background-color: #c0392b;
+.card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .badge {
-  padding: 5px 10px;
-  border-radius: 20px;
-  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
   font-weight: 500;
 }
 
+.badge .material-symbols-outlined {
+  font-size: 14px;
+}
+
 .badge-actif {
-  background-color: #d4edda;
+  background: #d4edda;
   color: #155724;
 }
 
 .badge-expire {
-  background-color: #f8d7da;
+  background: #f8d7da;
   color: #721c24;
 }
 
 .badge-renouvele {
-  background-color: #d1ecf1;
+  background: #d1ecf1;
   color: #0c5460;
 }
 
-.helloasso-badge {
-  margin-right: 5px;
+.badge-a_generer {
+  background: #fff3cd;
+  color: #856404;
 }
 
-.status-cell {
+.badge-helloasso {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.badge-carte {
+  background: #d4edda;
+  color: #155724;
+}
+
+.badge-online {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.badge-offline {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.card-footer {
+  padding-top: 16px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.card-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-action {
   display: flex;
   align-items: center;
-  white-space: nowrap;
-}
-
-.status-select {
-  padding: 6px 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 0.85em;
-  background-color: white;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+  background: white;
+  color: #667eea;
   cursor: pointer;
-  min-width: 100px;
-  max-width: 120px;
-  white-space: nowrap;
+  transition: all 0.2s;
 }
 
-.status-select:hover {
+.btn-action:hover {
+  background: #f5f7fa;
   border-color: #667eea;
 }
 
-.status-select:focus {
-  outline: none;
+.btn-action.btn-danger {
+  color: #e74c3c;
+}
+
+.btn-action.btn-danger:hover {
+  background: #fee;
+  border-color: #e74c3c;
+}
+
+.btn-action.btn-generate {
+  color: #27ae60;
+}
+
+.btn-action.btn-generate:hover {
+  background: #e8f5e9;
+  border-color: #27ae60;
+}
+
+/* Loading */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  gap: 20px;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 80px 20px;
+  background: white;
+  border-radius: 12px;
+}
+
+.empty-icon {
+  font-size: 64px;
+  color: #bdc3c7;
+  margin-bottom: 16px;
+}
+
+.empty-state h3 {
+  margin: 0 0 8px 0;
+  color: #2c3e50;
+}
+
+.empty-state p {
+  margin: 0;
+  color: #7f8c8d;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 40px;
+  padding: 20px;
+  background: white;
+  border-radius: 12px;
+}
+
+.pagination-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: #f5f7fa;
   border-color: #667eea;
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
 }
 
-.payment-badge {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 0.85em;
-  font-weight: 500;
-  white-space: nowrap;
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-.payment-helloasso {
-  background-color: #e3f2fd;
-  color: #1976d2;
-  border: 1px solid #90caf9;
+.pagination-info {
+  font-size: 14px;
+  color: #7f8c8d;
 }
 
-.payment-especes {
-  background-color: #fff3e0;
-  color: #e65100;
-  border: 1px solid #ffb74d;
-}
-
-.payment-cheque {
-  background-color: #f3e5f5;
-  color: #7b1fa2;
-  border: 1px solid #ba68c8;
-}
-
-.payment-cb {
-  background-color: #e8f5e9;
-  color: #388e3c;
-  border: 1px solid #81c784;
-}
-
-.payment-virement {
-  background-color: #e0f2f1;
-  color: #00796b;
-  border: 1px solid #4db6ac;
-}
-
-.payment-badge {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 0.85em;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.payment-helloasso {
-  background-color: #e3f2fd;
-  color: #1976d2;
-  border: 1px solid #90caf9;
-}
-
-.payment-especes {
-  background-color: #fff3e0;
-  color: #e65100;
-  border: 1px solid #ffb74d;
-}
-
-.payment-cheque {
-  background-color: #f3e5f5;
-  color: #7b1fa2;
-  border: 1px solid #ba68c8;
-}
-
-.payment-cb {
-  background-color: #e8f5e9;
-  color: #388e3c;
-  border: 1px solid #81c784;
-}
-
-.payment-virement {
-  background-color: #e0f2f1;
-  color: #00796b;
-  border: 1px solid #4db6ac;
-}
-
-.campaign-id {
-  font-size: 11px;
-  color: #666;
-  margin-left: 5px;
-}
-
+/* Modals */
 .modal {
   position: fixed;
   top: 0;
@@ -1635,24 +1637,26 @@ onMounted(() => {
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  padding: 20px;
 }
 
 .modal-content {
   background: white;
+  border-radius: 12px;
   padding: 30px;
-  border-radius: 10px;
   max-width: 600px;
-  width: 90%;
+  width: 100%;
   max-height: 90vh;
   overflow-y: auto;
 }
 
 .modal-content.large {
-  max-width: 900px;
+  max-width: 800px;
 }
 
-.form {
-  margin-top: 20px;
+.modal-content h2 {
+  margin: 0 0 20px 0;
+  color: #2c3e50;
 }
 
 .form-grid {
@@ -1664,6 +1668,7 @@ onMounted(() => {
 .form-group {
   display: flex;
   flex-direction: column;
+  gap: 8px;
 }
 
 .form-group.full-width {
@@ -1671,508 +1676,52 @@ onMounted(() => {
 }
 
 .form-group label {
-  margin-bottom: 5px;
-  font-weight: 500;
+  font-weight: 600;
   color: #2c3e50;
+  font-size: 14px;
 }
 
 .form-group input,
 .form-group select {
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
+  padding: 10px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
   font-size: 14px;
 }
 
 .form-actions {
   display: flex;
-  gap: 10px;
-  margin-top: 30px;
+  gap: 12px;
+  margin-top: 24px;
   justify-content: flex-end;
 }
 
 .btn-cancel {
-  background-color: #95a5a6;
-  color: white;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-.import-preview {
-  margin: 20px 0;
-  padding: 15px;
-  background-color: #f8f9fa;
-  border-radius: 5px;
-}
-
-.duplicates-warning {
-  margin-top: 10px;
-  padding: 10px;
-  background-color: #fff3cd;
-  border-left: 4px solid #ffc107;
-  border-radius: 5px;
-}
-
-.loading {
-  text-align: center;
-  padding: 40px;
-  color: #7f8c8d;
-}
-
-.empty-state {
-  text-align: center;
-  padding: 40px;
-  color: #7f8c8d;
-}
-
-.adhesions-count {
-  margin: 15px 0;
-  padding: 10px;
-  background-color: #e8f5e9;
-  border-left: 4px solid #4caf50;
-  border-radius: 4px;
-  color: #2e7d32;
-  font-size: 0.95em;
-}
-
-.adhesion-cell {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.adhesion-thumbnail {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 1px solid #ddd;
-  flex-shrink: 0;
-}
-
-.no-photo-placeholder {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background-color: #f0f0f0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  flex-shrink: 0;
-  border: 1px solid #ddd;
-}
-
-.pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 20px;
-  margin: 30px 0;
-  padding: 20px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-}
-
-.pagination-btn {
   padding: 10px 20px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  background-color: white;
-  color: #2c3e50;
-  cursor: pointer;
-  font-size: 0.95em;
-  transition: all 0.2s;
-}
-
-.pagination-btn:hover:not(:disabled) {
-  background-color: #3498db;
-  color: white;
-  border-color: #3498db;
-}
-
-.pagination-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.pagination-info {
-  font-size: 0.95em;
-  color: #555;
-  font-weight: 500;
-}
-
-.duplicates-info {
-  margin-top: 8px;
-  font-size: 0.9em;
-  color: #856404;
-}
-
-.import-options {
-  margin-top: 15px;
-  padding: 15px;
-  background-color: #f8f9fa;
-  border-radius: 5px;
-}
-
-.import-option {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  font-size: 0.95em;
-}
-
-.tabs {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  border-bottom: 2px solid #e0e0e0;
-  padding-bottom: 10px;
-}
-
-.tab-button {
-  padding: 12px 24px;
-  background: transparent;
-  border: none;
-  border-bottom: 3px solid transparent;
-  cursor: pointer;
-  font-size: 16px;
-  font-weight: 500;
-  color: #666;
-  transition: all 0.3s ease;
-  position: relative;
-  bottom: -2px;
-}
-
-.tab-button:hover {
-  color: #333;
-  background: #f5f5f5;
-  border-radius: 5px 5px 0 0;
-}
-
-.tab-button.active {
-  color: #007bff;
-  border-bottom-color: #007bff;
-  font-weight: 600;
-}
-
-.tab-count {
-  margin-left: 8px;
-  padding: 2px 8px;
-  background: #e0e0e0;
-  border-radius: 12px;
-  font-size: 14px;
-  font-weight: normal;
-}
-
-.tab-button.active .tab-count {
-  background: #007bff;
-  color: white;
-}
-
-.preview-cell {
-  min-width: 200px;
-  max-width: 250px;
-}
-
-.carte-preview-container {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.carte-preview {
-  border: 2px solid #007bff;
+  background: white;
+  border: 1px solid #e0e0e0;
   border-radius: 8px;
-  padding: 8px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  position: relative;
-  min-height: 80px;
-}
-
-.carte-preview-content {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.carte-photo {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid white;
-}
-
-.carte-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.carte-nom {
-  font-weight: 600;
-  font-size: 12px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin-bottom: 4px;
-}
-
-.carte-numero {
-  font-size: 10px;
-  opacity: 0.9;
-  margin-bottom: 4px;
-}
-
-.carte-statut-badge {
-  display: inline-block;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 500;
-}
-
-.carte-statut-badge.statut-generee {
-  background: #28a745;
-  color: white;
-}
-
-.carte-statut-badge.statut-a_generer {
-  background: #ffc107;
-  color: #000;
-}
-
-.carte-statut-badge.statut-a_remettre {
-  background: #17a2b8;
-  color: white;
-}
-
-.btn-preview-carte {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  border-radius: 4px;
-  padding: 4px 8px;
-  cursor: pointer;
-  font-size: 12px;
-  color: white;
-}
-
-.btn-preview-carte:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
-
-.carte-generate {
-  display: flex;
-  justify-content: center;
-}
-
-.btn-generate-carte {
-  padding: 8px 16px;
-  background: #28a745;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 500;
-  transition: background 0.3s;
-}
-
-.btn-generate-carte:hover:not(:disabled) {
-  background: #218838;
-}
-
-.btn-generate-carte:disabled {
-  background: #6c757d;
-  cursor: not-allowed;
-}
-
-.incomplete-badge {
-  padding: 6px 12px;
-  background: #ffc107;
-  color: #000;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 500;
-  text-align: center;
-}
-
-.preview-cell {
-  min-width: 200px;
-  max-width: 250px;
-}
-
-.carte-preview-container {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.carte-preview {
-  border: 2px solid #007bff;
-  border-radius: 8px;
-  padding: 8px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  position: relative;
-  min-height: 80px;
-}
-
-.carte-preview-content {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.carte-photo {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid white;
-}
-
-.carte-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.carte-nom {
-  font-weight: 600;
-  font-size: 12px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin-bottom: 4px;
-}
-
-.carte-numero {
-  font-size: 10px;
-  opacity: 0.9;
-  margin-bottom: 4px;
-}
-
-.carte-statut-badge {
-  display: inline-block;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 500;
-}
-
-.carte-statut-badge.statut-generee {
-  background: #28a745;
-  color: white;
-}
-
-.carte-statut-badge.statut-a_generer {
-  background: #ffc107;
-  color: #000;
-}
-
-.carte-statut-badge.statut-a_remettre {
-  background: #17a2b8;
-  color: white;
-}
-
-.btn-preview-carte {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  border-radius: 4px;
-  padding: 4px 8px;
-  cursor: pointer;
-  font-size: 12px;
-  color: white;
-}
-
-.btn-preview-carte:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
-
-.carte-generate {
-  display: flex;
-  justify-content: center;
-}
-
-.btn-generate-carte {
-  padding: 8px 16px;
-  background: #28a745;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 500;
-  transition: background 0.3s;
-}
-
-.btn-generate-carte:hover:not(:disabled) {
-  background: #218838;
-}
-
-.btn-generate-carte:disabled {
-  background: #6c757d;
-  cursor: not-allowed;
-}
-
-.incomplete-badge {
-  padding: 6px 12px;
-  background: #ffc107;
-  color: #000;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 500;
-  text-align: center;
-}
-
-.import-option input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
   cursor: pointer;
 }
 
-.photo-preview {
-  position: relative;
-  width: 150px;
-  height: 150px;
-  margin-bottom: 15px;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 2px solid #ddd;
-}
-
-.preview-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-
-.btn-remove-photo {
-  position: absolute;
-  top: 5px;
-  right: 5px;
-  background: #e74c3c;
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 30px;
-  height: 30px;
-  cursor: pointer;
-  font-size: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10;
+/* Responsive */
+@media (max-width: 768px) {
+  .cards-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .filters-content {
+    grid-template-columns: 1fr;
+  }
+  
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .stats-bar {
+    flex-wrap: wrap;
+  }
 }
 </style>

@@ -9,7 +9,8 @@
           </select>
         </div>
         <button @click="loadDashboardData" :disabled="loading" class="btn-refresh">
-          {{ loading ? 'Chargement...' : '🔄 Actualiser' }}
+          <span v-if="!loading" class="material-symbols-outlined" style="vertical-align: middle; margin-right: 5px;">refresh</span>
+          {{ loading ? 'Chargement...' : 'Actualiser' }}
         </button>
       </div>
     </div>
@@ -26,7 +27,7 @@
       <!-- Vue d'ensemble - Statistiques principales -->
       <div class="overview-section">
         <div class="stat-card-large total-revenue">
-          <div class="stat-icon-large">💰</div>
+          <div class="stat-icon-large"><span class="material-symbols-outlined">payments</span></div>
           <div class="stat-content-large">
             <div class="stat-label-large">Revenus totaux ({{ selectedYear }})</div>
             <div class="stat-value-large">{{ formatAmount(totalRevenue) }} €</div>
@@ -34,7 +35,7 @@
           </div>
         </div>
         <div class="stat-card-large total-adhesions">
-          <div class="stat-icon-large">👥</div>
+          <div class="stat-icon-large"><span class="material-symbols-outlined">groups</span></div>
           <div class="stat-content-large">
             <div class="stat-label-large">Adhésions ({{ selectedYear }})</div>
             <div class="stat-value-large">{{ adhesionsStats.total || 0 }}</div>
@@ -42,7 +43,7 @@
           </div>
         </div>
         <div class="stat-card-large total-dons">
-          <div class="stat-icon-large">💝</div>
+          <div class="stat-icon-large"><span class="material-symbols-outlined">favorite</span></div>
           <div class="stat-content-large">
             <div class="stat-label-large">Dons récents</div>
             <div class="stat-value-large">{{ formatAmount(recentDonsTotal) }} €</div>
@@ -50,7 +51,7 @@
           </div>
         </div>
         <div class="stat-card-large total-benevoles">
-          <div class="stat-icon-large">🤝</div>
+          <div class="stat-icon-large"><span class="material-symbols-outlined">handshake</span></div>
           <div class="stat-content-large">
             <div class="stat-label-large">Bénévoles actifs</div>
             <div class="stat-value-large">{{ benevolesStats.total_benevoles || 0 }}</div>
@@ -64,7 +65,7 @@
         <!-- Graphique en cercle des paiements -->
         <div class="chart-card">
           <div class="chart-header">
-            <h3>📊 Répartition des paiements</h3>
+            <h3><span class="material-symbols-outlined" style="vertical-align: middle; margin-right: 5px;">pie_chart</span> Répartition des paiements</h3>
             <span class="chart-subtitle">{{ selectedYear }}</span>
           </div>
           <div class="chart-container">
@@ -75,7 +76,7 @@
         <!-- Graphique d'évolution mensuelle -->
         <div class="chart-card">
           <div class="chart-header">
-            <h3>📈 Évolution mensuelle des adhésions</h3>
+            <h3><span class="material-symbols-outlined" style="vertical-align: middle; margin-right: 5px;">trending_up</span> Évolution mensuelle des adhésions</h3>
             <span class="chart-subtitle">{{ selectedYear }}</span>
           </div>
           <div class="chart-container">
@@ -86,10 +87,10 @@
 
       <!-- Détails des paiements -->
       <div class="section payments-detail">
-        <h2>💳 Détails des paiements ({{ selectedYear }})</h2>
+        <h2><span class="material-symbols-outlined" style="vertical-align: middle; margin-right: 5px;">credit_card</span> Détails des paiements ({{ selectedYear }})</h2>
         <div class="payments-grid">
           <div class="payment-card" v-for="(payment, key) in paiementsData" :key="key">
-            <div class="payment-icon">{{ getPaymentIcon(key) }}</div>
+            <div class="payment-icon"><span class="material-symbols-outlined">{{ getPaymentIcon(key) }}</span></div>
             <div class="payment-info">
               <div class="payment-label">{{ getPaymentLabel(key) }}</div>
               <div class="payment-amount">{{ formatAmount(payment.montant || 0) }} €</div>
@@ -104,45 +105,45 @@
 
       <!-- Statistiques détaillées des adhésions -->
       <div class="section adhesions-detail">
-        <h2>📋 Statistiques détaillées des adhésions ({{ selectedYear }})</h2>
+        <h2><span class="material-symbols-outlined" style="vertical-align: middle; margin-right: 5px;">description</span> Statistiques détaillées des adhésions ({{ selectedYear }})</h2>
         <div class="adhesions-detail-grid">
           <div class="detail-card">
-            <div class="detail-icon">✅</div>
+            <div class="detail-icon"><span class="material-symbols-outlined">check_circle</span></div>
             <div class="detail-content">
               <div class="detail-value">{{ adhesionsStats.actifs || 0 }}</div>
               <div class="detail-label">Actives</div>
             </div>
           </div>
           <div class="detail-card">
-            <div class="detail-icon">⏸️</div>
+            <div class="detail-icon"><span class="material-symbols-outlined">pause_circle</span></div>
             <div class="detail-content">
               <div class="detail-value">{{ adhesionsStats.inactifs || 0 }}</div>
               <div class="detail-label">Inactives</div>
             </div>
           </div>
           <div class="detail-card">
-            <div class="detail-icon">⏸️</div>
+            <div class="detail-icon"><span class="material-symbols-outlined">block</span></div>
             <div class="detail-content">
               <div class="detail-value">{{ adhesionsStats.suspendus || 0 }}</div>
               <div class="detail-label">Suspendues</div>
             </div>
           </div>
           <div class="detail-card">
-            <div class="detail-icon">📷</div>
+            <div class="detail-icon"><span class="material-symbols-outlined">photo_camera</span></div>
             <div class="detail-content">
               <div class="detail-value">{{ adhesionsStats.avec_photo || 0 }}</div>
               <div class="detail-label">Avec photo</div>
             </div>
           </div>
           <div class="detail-card">
-            <div class="detail-icon">🎴</div>
+            <div class="detail-icon"><span class="material-symbols-outlined">badge</span></div>
             <div class="detail-content">
               <div class="detail-value">{{ adhesionsStats.avec_carte || 0 }}</div>
               <div class="detail-label">Avec carte</div>
             </div>
           </div>
           <div class="detail-card">
-            <div class="detail-icon">💰</div>
+            <div class="detail-icon"><span class="material-symbols-outlined">payments</span></div>
             <div class="detail-content">
               <div class="detail-value">{{ formatAmount(adhesionsStats.total_montant || 0) }} €</div>
               <div class="detail-label">Montant total</div>
@@ -156,7 +157,7 @@
         <!-- Adhésions nécessitant des cartes -->
         <div class="info-card">
           <div class="info-card-header">
-            <h3>🎴 Adhésions nécessitant des cartes</h3>
+            <h3><span class="material-symbols-outlined" style="vertical-align: middle; margin-right: 5px;">badge</span> Adhésions nécessitant des cartes</h3>
             <span class="badge" v-if="adhesionsNeedCartes.length > 0">{{ adhesionsNeedCartes.length }}</span>
           </div>
           <div v-if="adhesionsNeedCartes.length === 0" class="empty-state">
@@ -183,7 +184,7 @@
         <!-- Menu du jour -->
         <div class="info-card">
           <div class="info-card-header">
-            <h3>🍽️ Menu du jour</h3>
+            <h3><span class="material-symbols-outlined" style="vertical-align: middle; margin-right: 5px;">restaurant_menu</span> Menu du jour</h3>
           </div>
           <div v-if="!currentMenu" class="empty-state">
             <p>Aucun menu disponible aujourd'hui</p>
@@ -205,7 +206,7 @@
         <!-- Bénévoles -->
         <div class="info-card">
           <div class="info-card-header">
-            <h3>👥 Bénévoles</h3>
+            <h3><span class="material-symbols-outlined" style="vertical-align: middle; margin-right: 5px;">groups</span> Bénévoles</h3>
           </div>
           <div class="benevoles-stats">
             <div class="stat-item">
@@ -232,7 +233,7 @@
         <!-- Dons récents -->
         <div class="info-card">
           <div class="info-card-header">
-            <h3>💝 Dons récents</h3>
+            <h3><span class="material-symbols-outlined" style="vertical-align: middle; margin-right: 5px;">favorite</span> Dons récents</h3>
           </div>
           <div v-if="recentDons.length === 0" class="empty-state">
             <p>Aucun don récent</p>
@@ -323,13 +324,13 @@ function formatDate(date: string) {
 
 function getPaymentIcon(key: string): string {
   const icons: Record<string, string> = {
-    especes: '💵',
-    cb: '💳',
-    virement: '🏦',
-    cheque: '📝',
-    helloasso: '🌐',
+    especes: 'monetization_on',
+    cb: 'credit_card',
+    virement: 'account_balance',
+    cheque: 'description',
+    helloasso: 'language',
   };
-  return icons[key] || '💰';
+  return icons[key] || 'payments';
 }
 
 function getPaymentLabel(key: string): string {
@@ -768,6 +769,12 @@ watch(selectedYear, async () => {
   opacity: 0.9;
 }
 
+.stat-icon-large .material-symbols-outlined {
+  font-size: 50px;
+  width: 50px;
+  height: 50px;
+}
+
 .stat-content-large {
   flex: 1;
 }
@@ -873,6 +880,12 @@ watch(selectedYear, async () => {
   font-size: 35px;
 }
 
+.payment-icon .material-symbols-outlined {
+  font-size: 35px;
+  width: 35px;
+  height: 35px;
+}
+
 .payment-info {
   flex: 1;
 }
@@ -929,6 +942,12 @@ watch(selectedYear, async () => {
 .detail-icon {
   font-size: 30px;
   margin-bottom: 10px;
+}
+
+.detail-icon .material-symbols-outlined {
+  font-size: 30px;
+  width: 30px;
+  height: 30px;
 }
 
 .detail-value {

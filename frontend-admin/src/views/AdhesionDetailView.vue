@@ -1,125 +1,298 @@
 <template>
-  <div class="adhesion-detail">
-    <div class="detail-header">
-      <button @click="goBack" class="btn-back">← Retour</button>
-      <div class="header-actions">
-        <button @click="editAdhesion" class="btn-primary">✏️ Modifier</button>
-        <button @click="confirmDelete" class="btn-danger">🗑️ Supprimer</button>
-      </div>
-    </div>
-
-    <div v-if="loading" class="loading">Chargement...</div>
-    <div v-else-if="error" class="error">{{ error }}</div>
-    <div v-else-if="adhesion" class="detail-content">
-      <div class="detail-card">
-        <h1>{{ adhesion.nom }} {{ adhesion.prenom }}</h1>
-        <div class="badge-container">
-          <span :class="['badge', `badge-${adhesion.statut}`]">{{ adhesion.statut }}</span>
-          <span v-if="adhesion.helloasso_id" class="badge badge-helloasso">✅ HelloAsso</span>
+  <div class="adhesion-detail-glass">
+    <!-- Background avec gradient -->
+    <div class="background-gradient"></div>
+    
+    <div class="detail-container">
+      <!-- Header avec navigation -->
+      <div class="page-header-glass">
+        <button @click="goBack" class="btn-back-glass">
+          <span class="material-symbols-outlined">arrow_back</span>
+          Retour
+        </button>
+        <div class="header-title">
+          <h1>Détails de l'adhésion</h1>
+          <p class="breadcrumb">Adhésions >> Détails</p>
+        </div>
+        <div class="header-actions-glass">
+          <button @click="generateAttestation" class="btn-action-glass" title="Générer attestation de paiement">
+            <span class="material-symbols-outlined">description</span>
+          </button>
+          <button @click="editAdhesion" class="btn-action-glass btn-primary-glass" title="Modifier">
+            <span class="material-symbols-outlined">edit</span>
+          </button>
+          <button @click="confirmDelete" class="btn-action-glass btn-danger-glass" title="Supprimer">
+            <span class="material-symbols-outlined">delete</span>
+          </button>
         </div>
       </div>
 
-      <div class="info-grid">
-        <!-- Informations personnelles -->
-        <div class="info-section">
-          <h2>👤 Informations personnelles</h2>
-          <div class="info-item">
-            <label>Nom</label>
-            <p>{{ adhesion.nom }}</p>
-          </div>
-          <div class="info-item">
-            <label>Prénom</label>
-            <p>{{ adhesion.prenom }}</p>
-          </div>
-          <div class="info-item">
-            <label>Email</label>
-            <p><a :href="`mailto:${adhesion.email}`">{{ adhesion.email }}</a></p>
-          </div>
-          <div class="info-item" v-if="adhesion.telephone">
-            <label>Téléphone</label>
-            <p><a :href="`tel:${adhesion.telephone}`">{{ adhesion.telephone }}</a></p>
-          </div>
-          <div class="info-item" v-if="adhesion.photo_url">
-            <label>Photo</label>
-            <img :src="getImageUrl(adhesion.photo_url)" alt="Photo" class="photo-preview" />
-          </div>
-        </div>
-
-        <!-- Informations d'adhésion -->
-        <div class="info-section">
-          <h2>📋 Informations d'adhésion</h2>
-          <div class="info-item">
-            <label>Date d'adhésion</label>
-            <p>{{ formatDate(adhesion.date_adhesion) }}</p>
-          </div>
-          <div class="info-item">
-            <label>Tarif</label>
-            <p class="price">{{ adhesion.tarif }} €</p>
-          </div>
-          <div class="info-item">
-            <label>Moyen de paiement</label>
-            <p>{{ formatMoyenPaiement(adhesion.moyen_paiement) }}</p>
-          </div>
-          <div class="info-item">
-            <label>Statut</label>
-            <p><span :class="['badge', `badge-${adhesion.statut}`]">{{ adhesion.statut }}</span></p>
-          </div>
-        </div>
-
-        <!-- HelloAsso -->
-        <div class="info-section" v-if="adhesion.helloasso_id || adhesion.helloasso_campaign_id">
-          <h2>🔗 HelloAsso</h2>
-          <div class="info-item" v-if="adhesion.helloasso_id">
-            <label>ID Adhésion HelloAsso</label>
-            <p><code>{{ adhesion.helloasso_id }}</code></p>
-          </div>
-          <div class="info-item" v-if="adhesion.helloasso_campaign_id">
-            <label>ID Campagne HelloAsso</label>
-            <p><code>{{ adhesion.helloasso_campaign_id }}</code></p>
-          </div>
-        </div>
-
-        <!-- Cartes associées -->
-        <div class="info-section" v-if="adhesion.cartes && adhesion.cartes.length > 0">
-          <h2>🎴 Cartes membres</h2>
-          <div class="cartes-list">
-            <div v-for="carte in adhesion.cartes" :key="carte.id" class="carte-item">
-              <div class="carte-info">
-                <p><strong>Numéro:</strong> {{ carte.numero_carte || 'N/A' }}</p>
-                <p><strong>Statut:</strong> <span :class="['badge', `badge-${carte.statut}`]">{{ carte.statut }}</span></p>
-                <p v-if="carte.date_generation"><strong>Générée le:</strong> {{ formatDateTime(carte.date_generation) }}</p>
-                <p v-if="carte.date_remise"><strong>Remise le:</strong> {{ formatDateTime(carte.date_remise) }}</p>
+      <div v-if="loading" class="loading-container-glass">
+        <div class="spinner-glass"></div>
+        <p>Chargement...</p>
+      </div>
+      <div v-else-if="error" class="error-glass">{{ error }}</div>
+      <div v-else-if="adhesion" class="content-wrapper-glass">
+        <!-- Carte principale - Carte d'identité -->
+        <div class="glass-card identity-card-glass">
+          <div class="card-header-glass">
+            <div class="logo-section">
+              <div class="logo-circle-glass">
+                <span class="material-symbols-outlined">groups</span>
               </div>
+              <div class="logo-text-glass">
+                <h2>IGCA PARIS</h2>
+                <p>Indian Gujarati Cultural Association</p>
+              </div>
+            </div>
+            <div class="badges-header">
+              <span :class="['badge-glass', `badge-${adhesion.statut}`]">
+                <span class="material-symbols-outlined">{{ getStatutIcon(adhesion.statut) }}</span>
+                {{ formatStatut(adhesion.statut) }}
+              </span>
+              <span v-if="adhesion.source === 'offline'" class="badge-glass badge-offline">
+                <span class="material-symbols-outlined">store</span>
+                Hors ligne
+              </span>
+              <span v-else-if="adhesion.source === 'online'" class="badge-glass badge-online">
+                <span class="material-symbols-outlined">language</span>
+                En ligne
+              </span>
+            </div>
+          </div>
+          
+          <div class="card-body-glass">
+            <div class="photo-section-glass">
+              <div class="photo-frame-glass">
+                <img
+                  v-if="adhesion.photo_url"
+                  :src="getImageUrl(adhesion.photo_url)"
+                  :alt="`${adhesion.nom} ${adhesion.prenom}`"
+                  @error="handleImageError"
+                />
+                <div v-else class="photo-placeholder-glass">
+                  <span class="material-symbols-outlined">person</span>
+                </div>
+              </div>
+              <div class="photo-badge-glass" v-if="adhesion.photo_url">
+                <span class="material-symbols-outlined">check_circle</span>
+                Photo disponible
+              </div>
+            </div>
+            
+            <div class="info-section-glass">
+              <div class="name-section">
+                <h1 class="name-glass">{{ adhesion.prenom }} {{ adhesion.nom }}</h1>
+                <div class="id-badge-glass">
+                  <span class="material-symbols-outlined">fingerprint</span>
+                  <span>ID: #{{ adhesion.id }}</span>
+                </div>
+              </div>
+              
+              <div class="details-grid-glass">
+                <div class="detail-item-glass">
+                  <div class="detail-icon-glass">
+                    <span class="material-symbols-outlined">email</span>
+                  </div>
+                  <div class="detail-content-glass">
+                    <span class="detail-label">Email</span>
+                    <a :href="`mailto:${adhesion.email}`" class="detail-value">{{ adhesion.email || 'Non renseigné' }}</a>
+                  </div>
+                </div>
+                
+                <div class="detail-item-glass" v-if="adhesion.telephone">
+                  <div class="detail-icon-glass">
+                    <span class="material-symbols-outlined">phone</span>
+                  </div>
+                  <div class="detail-content-glass">
+                    <span class="detail-label">Téléphone</span>
+                    <a :href="`tel:${adhesion.telephone}`" class="detail-value">{{ adhesion.telephone }}</a>
+                  </div>
+                </div>
+                
+                <div class="detail-item-glass">
+                  <div class="detail-icon-glass">
+                    <span class="material-symbols-outlined">calendar_today</span>
+                  </div>
+                  <div class="detail-content-glass">
+                    <span class="detail-label">Date d'adhésion</span>
+                    <span class="detail-value">{{ formatDate(adhesion.date_adhesion) }}</span>
+                  </div>
+                </div>
+                
+                <div class="detail-item-glass">
+                  <div class="detail-icon-glass">
+                    <span class="material-symbols-outlined">payments</span>
+                  </div>
+                  <div class="detail-content-glass">
+                    <span class="detail-label">Tarif</span>
+                    <span class="detail-value price-glass">{{ adhesion.tarif }} €</span>
+                  </div>
+                </div>
+                
+                <div class="detail-item-glass">
+                  <div class="detail-icon-glass">
+                    <span class="material-symbols-outlined">{{ getPaymentIcon(adhesion.moyen_paiement) }}</span>
+                  </div>
+                  <div class="detail-content-glass">
+                    <span class="detail-label">Moyen de paiement</span>
+                    <span class="detail-value">{{ formatMoyenPaiement(adhesion.moyen_paiement) }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card-footer-glass">
+            <div class="footer-item-glass" v-if="adhesion.helloasso_id">
+              <span class="material-symbols-outlined">link</span>
+              <span>HelloAsso ID: {{ adhesion.helloasso_id }}</span>
+            </div>
+            <div class="footer-item-glass">
+              <span class="material-symbols-outlined">schedule</span>
+              <span>Créée le {{ formatDateTime(adhesion.created_at) }}</span>
             </div>
           </div>
         </div>
 
-        <!-- Métadonnées -->
-        <div class="info-section">
-          <h2>📅 Métadonnées</h2>
-          <div class="info-item">
-            <label>Créée le</label>
-            <p>{{ formatDateTime(adhesion.created_at) }}</p>
+        <!-- Section Documents -->
+        <div class="section-title-glass">
+          <h2>
+            <span class="material-symbols-outlined">folder</span>
+            Documents
+          </h2>
+        </div>
+
+        <div class="documents-grid-glass">
+          <!-- Carte membre -->
+          <div v-if="adhesion.cartes && adhesion.cartes.length > 0" class="glass-card document-card-glass">
+            <div class="document-icon-wrapper">
+              <span class="material-symbols-outlined document-icon-gradient">badge</span>
+            </div>
+            <h3>Carte membre</h3>
+            <div class="document-info-glass">
+              <div class="info-line-glass">
+                <span class="info-label">Numéro</span>
+                <span class="info-value">{{ adhesion.cartes[0].numero_carte }}</span>
+              </div>
+              <div class="info-line-glass">
+                <span class="info-label">Statut</span>
+                <span :class="['badge-glass', `badge-${adhesion.cartes[0].statut}`]">
+                  {{ formatCarteStatut(adhesion.cartes[0].statut) }}
+                </span>
+              </div>
+              <div class="info-line-glass" v-if="adhesion.cartes[0].date_generation">
+                <span class="info-label">Générée le</span>
+                <span class="info-value">{{ formatDateTime(adhesion.cartes[0].date_generation) }}</span>
+              </div>
+            </div>
+            <div class="document-actions-glass">
+              <button @click="downloadCarte('pdf')" class="btn-download-glass">
+                <span class="material-symbols-outlined">picture_as_pdf</span>
+                PDF
+              </button>
+              <button @click="downloadCarte('png')" class="btn-download-glass">
+                <span class="material-symbols-outlined">image</span>
+                Image
+              </button>
+            </div>
           </div>
-          <div class="info-item" v-if="adhesion.updated_at">
-            <label>Modifiée le</label>
-            <p>{{ formatDateTime(adhesion.updated_at) }}</p>
+          
+          <!-- Attestation de paiement -->
+          <div class="glass-card document-card-glass">
+            <div class="document-icon-wrapper">
+              <span class="material-symbols-outlined document-icon-gradient">description</span>
+            </div>
+            <h3>Attestation de paiement</h3>
+            <div class="document-info-glass">
+              <div class="info-line-glass">
+                <span class="info-label">Date</span>
+                <span class="info-value">{{ formatDate(adhesion.date_adhesion) }}</span>
+              </div>
+              <div class="info-line-glass">
+                <span class="info-label">Montant</span>
+                <span class="info-value price-glass">{{ adhesion.tarif }} €</span>
+              </div>
+              <div class="info-line-glass">
+                <span class="info-label">Paiement</span>
+                <span class="info-value">{{ formatMoyenPaiement(adhesion.moyen_paiement) }}</span>
+              </div>
+              <div class="info-line-glass">
+                <span class="info-label">Statut</span>
+                <span :class="['badge-glass', `badge-${adhesion.statut}`]">
+                  {{ formatStatut(adhesion.statut) }}
+                </span>
+              </div>
+            </div>
+            <div class="document-actions-glass">
+              <button @click="generateAttestation" class="btn-download-glass btn-primary-gradient">
+                <span class="material-symbols-outlined">download</span>
+                Télécharger
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Informations complémentaires -->
+        <div class="section-title-glass">
+          <h2>
+            <span class="material-symbols-outlined">info</span>
+            Informations complémentaires
+          </h2>
+        </div>
+
+        <div class="info-grid-glass">
+          <div class="glass-card info-card-glass">
+            <div class="info-card-header">
+              <span class="material-symbols-outlined info-icon-gradient">link</span>
+              <h3>HelloAsso</h3>
+            </div>
+            <div class="info-content-glass" v-if="adhesion.helloasso_id || adhesion.helloasso_campaign_id">
+              <div class="info-item-glass" v-if="adhesion.helloasso_id">
+                <span class="info-label">ID Adhésion</span>
+                <code class="info-code">{{ adhesion.helloasso_id }}</code>
+              </div>
+              <div class="info-item-glass" v-if="adhesion.helloasso_campaign_id">
+                <span class="info-label">ID Campagne</span>
+                <code class="info-code">{{ adhesion.helloasso_campaign_id }}</code>
+              </div>
+            </div>
+            <div v-else class="info-content-glass">
+              <p class="no-data-glass">Aucune information HelloAsso</p>
+            </div>
+          </div>
+          
+          <div class="glass-card info-card-glass">
+            <div class="info-card-header">
+              <span class="material-symbols-outlined info-icon-gradient">history</span>
+              <h3>Historique</h3>
+            </div>
+            <div class="info-content-glass">
+              <div class="info-item-glass">
+                <span class="info-label">Créée le</span>
+                <span class="info-value">{{ formatDateTime(adhesion.created_at) }}</span>
+              </div>
+              <div class="info-item-glass" v-if="adhesion.updated_at">
+                <span class="info-label">Modifiée le</span>
+                <span class="info-value">{{ formatDateTime(adhesion.updated_at) }}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Modal de confirmation de suppression -->
-    <div v-if="showDeleteModal" class="modal" @click.self="showDeleteModal = false">
-      <div class="modal-content">
+    <div v-if="showDeleteModal" class="modal-glass" @click.self="showDeleteModal = false">
+      <div class="modal-content-glass">
         <h2>Confirmer la suppression</h2>
         <p>Êtes-vous sûr de vouloir supprimer l'adhésion de <strong>{{ adhesion?.nom }} {{ adhesion?.prenom }}</strong> ?</p>
-        <p class="warning">Cette action est irréversible et supprimera également toutes les cartes associées.</p>
-        <div class="modal-actions">
-          <button @click="deleteAdhesion" :disabled="deleting" class="btn-danger">
+        <p class="warning-glass">Cette action est irréversible et supprimera également toutes les cartes associées.</p>
+        <div class="modal-actions-glass">
+          <button @click="deleteAdhesion" :disabled="deleting" class="btn-danger-glass">
             {{ deleting ? 'Suppression...' : 'Supprimer' }}
           </button>
-          <button @click="showDeleteModal = false" class="btn-cancel">Annuler</button>
+          <button @click="showDeleteModal = false" class="btn-cancel-glass">Annuler</button>
         </div>
       </div>
     </div>
@@ -129,7 +302,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { adhesionsApi } from '@/services/api';
+import { adhesionsApi, cartesApi } from '@/services/api';
 
 const router = useRouter();
 const route = useRoute();
@@ -140,44 +313,51 @@ const showDeleteModal = ref(false);
 const deleting = ref(false);
 
 function formatDate(date: string) {
-  return new Date(date).toLocaleDateString('fr-FR', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
+  if (!date) return 'Date invalide';
+  try {
+    return new Date(date).toLocaleDateString('fr-FR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  } catch {
+    return 'Date invalide';
+  }
 }
 
 function formatDateTime(date: string) {
-  return new Date(date).toLocaleString('fr-FR', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+  if (!date) return 'Date invalide';
+  try {
+    return new Date(date).toLocaleString('fr-FR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch {
+    return 'Date invalide';
+  }
 }
 
-// Fonction pour construire l'URL complète de l'image
 function getImageUrl(photoUrl: string | null | undefined): string {
   if (!photoUrl) return '';
-  
-  // Si c'est déjà une URL complète (http/https), retourner tel quel
   if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
     return photoUrl;
   }
-  
-  // Si c'est une URL locale (uploads), construire l'URL complète
   if (photoUrl.startsWith('/uploads/') || photoUrl.startsWith('uploads/')) {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
     return photoUrl.startsWith('/uploads/') ? `${apiUrl}${photoUrl}` : `${apiUrl}/${photoUrl}`;
   }
-  
-  // Si c'est un data URL ou blob, retourner tel quel
   if (photoUrl.startsWith('data:') || photoUrl.startsWith('blob:')) {
     return photoUrl;
   }
-  
   return photoUrl;
+}
+
+function handleImageError(event: Event) {
+  const img = event.target as HTMLImageElement;
+  img.style.display = 'none';
 }
 
 function formatMoyenPaiement(moyen: string) {
@@ -189,6 +369,47 @@ function formatMoyenPaiement(moyen: string) {
     virement: 'Virement'
   };
   return moyens[moyen] || moyen;
+}
+
+function getPaymentIcon(moyen: string): string {
+  const icons: Record<string, string> = {
+    helloasso: 'language',
+    especes: 'monetization_on',
+    cheque: 'description',
+    cb: 'credit_card',
+    virement: 'account_balance',
+  };
+  return icons[moyen] || 'payments';
+}
+
+function formatStatut(statut: string) {
+  const statuts: Record<string, string> = {
+    actif: 'Actif',
+    expire: 'Expiré',
+    renouvele: 'Renouvelé',
+    a_generer: 'À générer',
+  };
+  return statuts[statut] || statut;
+}
+
+function getStatutIcon(statut: string): string {
+  const icons: Record<string, string> = {
+    actif: 'check_circle',
+    expire: 'cancel',
+    renouvele: 'refresh',
+    a_generer: 'pending',
+  };
+  return icons[statut] || 'help';
+}
+
+function formatCarteStatut(statut: string) {
+  const statuts: Record<string, string> = {
+    a_generer: 'À générer',
+    generee: 'Générée',
+    a_remettre: 'À remettre',
+    remise: 'Remise',
+  };
+  return statuts[statut] || statut;
 }
 
 function goBack() {
@@ -219,6 +440,45 @@ async function deleteAdhesion() {
   }
 }
 
+async function generateAttestation() {
+  if (!adhesion.value) return;
+  
+  try {
+    const response = await adhesionsApi.generateAttestation(adhesion.value.id);
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `attestation_paiement_${adhesion.value.id}_${adhesion.value.nom}_${adhesion.value.prenom}.pdf`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  } catch (error: any) {
+    console.error('Erreur lors de la génération de l\'attestation:', error);
+    alert(error.response?.data?.error || 'Erreur lors de la génération de l\'attestation de paiement');
+  }
+}
+
+async function downloadCarte(format: 'pdf' | 'png') {
+  if (!adhesion.value || !adhesion.value.cartes || adhesion.value.cartes.length === 0) return;
+  
+  try {
+    const carteId = adhesion.value.cartes[0].id;
+    const response = await cartesApi.download(carteId, format);
+    const blob = new Blob([response.data], { 
+      type: format === 'pdf' ? 'application/pdf' : 'image/png' 
+    });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `carte_${adhesion.value.cartes[0].numero_carte}.${format}`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  } catch (error: any) {
+    console.error('Erreur lors du téléchargement de la carte:', error);
+    alert(error.response?.data?.error || 'Erreur lors du téléchargement de la carte');
+  }
+}
+
 async function loadAdhesion() {
   loading.value = true;
   error.value = '';
@@ -240,260 +500,822 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.adhesion-detail {
-  width: 100%;
+.adhesion-detail-glass {
+  min-height: 100vh;
+  position: relative;
+  padding: 30px;
 }
 
-.detail-header {
+/* Background gradient */
+.background-gradient {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  z-index: 0;
+  opacity: 0.1;
+}
+
+.detail-container {
+  position: relative;
+  z-index: 1;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Glassmorphism effect */
+.glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  padding: 30px;
+  transition: all 0.3s ease;
+}
+
+.glass-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* Header */
+.page-header-glass {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  padding: 24px 30px;
+  margin-bottom: 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.btn-back-glass {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(10px);
+  color: #2c3e50;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.btn-back-glass:hover {
+  background: rgba(255, 255, 255, 0.9);
+  transform: translateX(-3px);
+}
+
+.header-title h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.breadcrumb {
+  margin: 5px 0 0 0;
+  font-size: 13px;
+  color: #7f8c8d;
+}
+
+.header-actions-glass {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.btn-action-glass {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(10px);
+  color: #667eea;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-action-glass:hover {
+  background: rgba(255, 255, 255, 0.9);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.btn-action-glass.btn-primary-glass {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+}
+
+.btn-action-glass.btn-primary-glass:hover {
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-action-glass.btn-danger-glass {
+  color: #e74c3c;
+}
+
+.btn-action-glass.btn-danger-glass:hover {
+  background: rgba(231, 76, 60, 0.1);
+}
+
+/* Loading */
+.loading-container-glass {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100px 20px;
+  gap: 20px;
+}
+
+.spinner-glass {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-top: 4px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error-glass {
+  text-align: center;
+  padding: 40px;
+  background: rgba(248, 215, 218, 0.9);
+  backdrop-filter: blur(20px);
+  color: #e74c3c;
+  border-radius: 20px;
+  border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
+/* Carte d'identité */
+.identity-card-glass {
+  margin-bottom: 30px;
+  padding: 40px;
+}
+
+.card-header-glass {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 30px;
+  padding-bottom: 25px;
+  border-bottom: 2px solid rgba(102, 126, 234, 0.1);
+  flex-wrap: wrap;
+  gap: 20px;
 }
 
-.btn-back {
-  padding: 10px 20px;
-  background-color: #95a5a6;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.btn-back:hover {
-  background-color: #7f8c8d;
-}
-
-.header-actions {
+.logo-section {
   display: flex;
-  gap: 10px;
+  align-items: center;
+  gap: 20px;
 }
 
-.btn-primary {
-  padding: 12px 24px;
-  background-color: #667eea;
+.logo-circle-glass {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.logo-circle-glass .material-symbols-outlined {
+  font-size: 36px;
   color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 16px;
 }
 
-.btn-primary:hover {
-  background-color: #5568d3;
+.logo-text-glass h2 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-.btn-danger {
-  padding: 12px 24px;
-  background-color: #e74c3c;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 16px;
+.logo-text-glass p {
+  margin: 5px 0 0 0;
+  font-size: 13px;
+  color: #7f8c8d;
 }
 
-.btn-danger:hover {
-  background-color: #c0392b;
-}
-
-.detail-card {
-  background: white;
-  padding: 30px;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  margin-bottom: 30px;
-}
-
-.detail-card h1 {
-  margin: 0 0 15px 0;
-  color: #2c3e50;
-}
-
-.badge-container {
+.badges-header {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
 }
 
-.badge {
-  padding: 5px 15px;
+.badge-glass {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
   border-radius: 20px;
   font-size: 12px;
   font-weight: 500;
-  display: inline-block;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-.badge-actif {
-  background-color: #d4edda;
-  color: #155724;
+.badge-glass .material-symbols-outlined {
+  font-size: 16px;
 }
 
-.badge-expire {
-  background-color: #f8d7da;
-  color: #721c24;
+.badge-glass.badge-actif {
+  background: rgba(39, 174, 96, 0.15);
+  color: #27ae60;
+  border-color: rgba(39, 174, 96, 0.3);
 }
 
-.badge-renouvele {
-  background-color: #d1ecf1;
-  color: #0c5460;
+.badge-glass.badge-expire {
+  background: rgba(231, 76, 60, 0.15);
+  color: #e74c3c;
+  border-color: rgba(231, 76, 60, 0.3);
 }
 
-.badge-helloasso {
-  background-color: #fff3cd;
-  color: #856404;
+.badge-glass.badge-renouvele {
+  background: rgba(52, 152, 219, 0.15);
+  color: #3498db;
+  border-color: rgba(52, 152, 219, 0.3);
 }
 
-.info-grid {
+.badge-glass.badge-online {
+  background: rgba(52, 152, 219, 0.15);
+  color: #3498db;
+  border-color: rgba(52, 152, 219, 0.3);
+}
+
+.badge-glass.badge-offline {
+  background: rgba(241, 196, 15, 0.15);
+  color: #f1c40f;
+  border-color: rgba(241, 196, 15, 0.3);
+}
+
+.card-body-glass {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: 200px 1fr;
+  gap: 40px;
+  align-items: start;
+}
+
+.photo-section-glass {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.photo-frame-glass {
+  width: 180px;
+  height: 240px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.5);
+  border: 3px solid rgba(102, 126, 234, 0.2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.photo-frame-glass img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photo-placeholder-glass {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #bdc3c7;
+}
+
+.photo-placeholder-glass .material-symbols-outlined {
+  font-size: 64px;
+}
+
+.photo-badge-glass {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: rgba(39, 174, 96, 0.15);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  font-size: 12px;
+  color: #27ae60;
+  border: 1px solid rgba(39, 174, 96, 0.3);
+}
+
+.info-section-glass {
+  flex: 1;
+}
+
+.name-section {
+  margin-bottom: 30px;
+}
+
+.name-glass {
+  font-size: 36px;
+  font-weight: 700;
+  margin: 0 0 15px 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.2;
+}
+
+.id-badge-glass {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  background: rgba(102, 126, 234, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  font-size: 14px;
+  font-weight: 600;
+  color: #667eea;
+}
+
+.details-grid-glass {
+  display: flex;
+  flex-direction: column;
   gap: 20px;
 }
 
-.info-section {
-  background: white;
-  padding: 25px;
+.detail-item-glass {
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.2s;
+}
+
+.detail-item-glass:hover {
+  background: rgba(255, 255, 255, 0.7);
+  transform: translateX(5px);
+}
+
+.detail-icon-glass {
+  width: 40px;
+  height: 40px;
   border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
 }
 
-.info-section h2 {
-  margin: 0 0 20px 0;
-  color: #2c3e50;
-  font-size: 18px;
-  border-bottom: 2px solid #ecf0f1;
-  padding-bottom: 10px;
+.detail-icon-glass .material-symbols-outlined {
+  font-size: 22px;
+  color: white;
 }
 
-.info-item {
-  margin-bottom: 15px;
+.detail-content-glass {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.info-item label {
-  display: block;
-  font-weight: 600;
-  color: #7f8c8d;
-  font-size: 12px;
+.detail-label {
+  font-size: 11px;
   text-transform: uppercase;
-  margin-bottom: 5px;
+  color: #7f8c8d;
+  font-weight: 600;
+  letter-spacing: 0.5px;
 }
 
-.info-item p {
-  margin: 0;
+.detail-value {
+  font-size: 16px;
+  font-weight: 600;
   color: #2c3e50;
-  font-size: 14px;
 }
 
-.info-item a {
+.detail-value.price-glass {
+  font-size: 20px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.detail-value a {
   color: #667eea;
   text-decoration: none;
+  transition: all 0.2s;
 }
 
-.info-item a:hover {
+.detail-value a:hover {
+  color: #764ba2;
   text-decoration: underline;
 }
 
-.info-item code {
-  background-color: #f8f9fa;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-family: 'Courier New', monospace;
-  font-size: 12px;
-  color: #e74c3c;
+.card-footer-glass {
+  margin-top: 30px;
+  padding-top: 25px;
+  border-top: 2px solid rgba(102, 126, 234, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
 }
 
-.price {
+.footer-item-glass {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #7f8c8d;
+}
+
+.footer-item-glass .material-symbols-outlined {
+  font-size: 18px;
+}
+
+/* Section Documents */
+.section-title-glass {
+  margin: 40px 0 20px 0;
+}
+
+.section-title-glass h2 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.section-title-glass .material-symbols-outlined {
+  color: #667eea;
+}
+
+.documents-grid-glass {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 25px;
+  margin-bottom: 40px;
+}
+
+.document-card-glass {
+  text-align: center;
+  padding: 30px;
+}
+
+.document-icon-wrapper {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 20px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.document-icon-gradient {
+  font-size: 40px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.document-card-glass h3 {
+  margin: 0 0 20px 0;
   font-size: 20px;
-  font-weight: bold;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.document-info-glass {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 25px;
+  text-align: left;
+}
+
+.info-line-glass {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.info-line-glass:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  font-size: 13px;
+  color: #7f8c8d;
+  font-weight: 500;
+}
+
+.info-value {
+  font-size: 14px;
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.info-value.price-glass {
   color: #27ae60;
+  font-size: 16px;
 }
 
-.photo-preview {
-  max-width: 200px;
-  max-height: 200px;
-  border-radius: 10px;
-  margin-top: 10px;
+.document-actions-glass {
+  display: flex;
+  gap: 10px;
 }
 
-.cartes-list {
+.btn-download-glass {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #667eea;
+  transition: all 0.2s;
+}
+
+.btn-download-glass:hover {
+  background: rgba(255, 255, 255, 0.9);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.btn-download-glass.btn-primary-gradient {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+}
+
+.btn-download-glass.btn-primary-gradient:hover {
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-download-glass .material-symbols-outlined {
+  font-size: 18px;
+}
+
+/* Informations complémentaires */
+.info-grid-glass {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 25px;
+}
+
+.info-card-glass {
+  padding: 25px;
+}
+
+.info-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid rgba(102, 126, 234, 0.1);
+}
+
+.info-icon-gradient {
+  font-size: 28px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.info-card-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.info-content-glass {
   display: flex;
   flex-direction: column;
   gap: 15px;
 }
 
-.carte-item {
-  padding: 15px;
-  background-color: #f8f9fa;
-  border-radius: 5px;
-  border-left: 4px solid #667eea;
+.info-item-glass {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-.carte-info p {
-  margin: 5px 0;
-  font-size: 14px;
+.info-item-glass:last-child {
+  border-bottom: none;
 }
 
-.loading {
-  text-align: center;
-  padding: 40px;
+.info-item-glass .info-label {
+  font-size: 13px;
   color: #7f8c8d;
+  font-weight: 500;
 }
 
-.error {
+.info-item-glass .info-value {
+  font-size: 14px;
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.info-code {
+  background: rgba(102, 126, 234, 0.1);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  color: #667eea;
+  border: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+.no-data-glass {
+  color: #7f8c8d;
+  font-style: italic;
+  margin: 0;
   text-align: center;
-  padding: 40px;
-  color: #e74c3c;
-  background-color: #f8d7da;
-  border-radius: 10px;
+  padding: 20px;
 }
 
-.modal {
+/* Modal */
+.modal-glass {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(5px);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  padding: 20px;
 }
 
-.modal-content {
-  background: white;
-  padding: 30px;
-  border-radius: 10px;
+.modal-content-glass {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 20px;
+  padding: 35px;
   max-width: 500px;
-  width: 90%;
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 }
 
-.modal-content h2 {
+.modal-content-glass h2 {
   margin: 0 0 15px 0;
   color: #2c3e50;
+  font-size: 24px;
 }
 
-.modal-content .warning {
+.modal-content-glass .warning-glass {
   color: #e74c3c;
   font-weight: 500;
   margin: 15px 0;
 }
 
-.modal-actions {
+.modal-actions-glass {
   display: flex;
-  gap: 10px;
-  margin-top: 20px;
+  gap: 12px;
+  margin-top: 25px;
   justify-content: flex-end;
 }
 
-.btn-cancel {
-  background-color: #95a5a6;
+.btn-cancel-glass {
+  background: rgba(149, 165, 166, 0.2);
+  backdrop-filter: blur(10px);
+  color: #2c3e50;
+  border: 1px solid rgba(149, 165, 166, 0.3);
+  padding: 12px 24px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btn-cancel-glass:hover {
+  background: rgba(149, 165, 166, 0.3);
+}
+
+.btn-danger-glass {
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
   color: white;
   border: none;
   padding: 12px 24px;
-  border-radius: 5px;
+  border-radius: 12px;
   cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btn-danger-glass:hover {
+  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .adhesion-detail-glass {
+    padding: 15px;
+  }
+  
+  .card-body-glass {
+    grid-template-columns: 1fr;
+    gap: 30px;
+  }
+  
+  .photo-frame-glass {
+    width: 150px;
+    height: 200px;
+  }
+  
+  .name-glass {
+    font-size: 28px;
+  }
+  
+  .documents-grid-glass {
+    grid-template-columns: 1fr;
+  }
+  
+  .info-grid-glass {
+    grid-template-columns: 1fr;
+  }
+  
+  .page-header-glass {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .header-actions-glass {
+    width: 100%;
+    flex-wrap: wrap;
+  }
 }
 </style>
-

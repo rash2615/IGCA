@@ -113,6 +113,8 @@ export const adhesionsApi = {
   },
   delete: (id: number) => api.delete(`/adhesions/${id}`),
   needCartes: () => api.get('/adhesions/need-cartes'),
+  generateAttestation: (id: number) =>
+    api.get(`/adhesions/${id}/attestation`, { responseType: 'blob' }),
   syncHelloAsso: (data: any) => api.post('/adhesions/sync-helloasso', data),
   testHelloAssoConnection: (data: any) => api.post('/adhesions/helloasso/test-connection', data),
   import: (file: File) => {
@@ -122,9 +124,15 @@ export const adhesionsApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
+  importCsv: (formData: FormData) => {
+    return api.post('/adhesions/import', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
   validateImport: (importId: number, data: any) =>
     api.post(`/adhesions/import/${importId}/validate`, data),
   export: (params?: any) => api.get('/adhesions/export/csv', { params, responseType: 'blob' }),
+  exportCsv: (params?: any) => api.get('/adhesions/export/csv', { params, responseType: 'blob' }),
 };
 
 export const cartesApi = {

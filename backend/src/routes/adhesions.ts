@@ -4,6 +4,7 @@ import { parse } from 'csv-parse/sync';
 import fs from 'fs';
 import path from 'path';
 import axios from 'axios';
+import PDFDocument from 'pdfkit';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth';
 import { pool } from '../config/database';
 import { logger } from '../utils/logger';
@@ -67,6 +68,7 @@ router.get('/', async (req: AuthRequest, res) => {
       statut,
       tarif,
       moyen_paiement,
+      source,
       search,
       page = '1',
       limit = '20', // 20 adhésions par page
@@ -95,6 +97,7 @@ router.get('/', async (req: AuthRequest, res) => {
         a.helloasso_id,
         a.helloasso_campaign_id,
         a.photo_url,
+        a.source,
         a.created_at,
         c.id as carte_id,
         c.numero_carte,
@@ -142,6 +145,16 @@ router.get('/', async (req: AuthRequest, res) => {
       countQuery += condition;
       params.push(moyen_paiement);
       countParams.push(moyen_paiement);
+      paramIndex++;
+      countParamIndex++;
+    }
+
+    if (source) {
+      const condition = ` AND a.source = $${paramIndex}`;
+      query += condition;
+      countQuery += condition;
+      params.push(source);
+      countParams.push(source);
       paramIndex++;
       countParamIndex++;
     }
@@ -206,11 +219,12 @@ router.get('/:id', async (req, res) => {
       `SELECT 
         a.*,
         c.id as carte_id,
+        c.numero_carte,
         c.statut as carte_statut,
         c.date_generation,
         c.date_remise
        FROM adhesions a
-       LEFT JOIN cartes c ON a.id = c.adhesion_id
+       LEFT JOIN cartes c ON a.id = c.adhesion_id AND c.statut != 'remise'
        WHERE a.id = $1
        ORDER BY c.date_generation DESC`,
       [id]
@@ -225,6 +239,7 @@ router.get('/:id', async (req, res) => {
       .filter((row: any) => row.carte_id)
       .map((row: any) => ({
         id: row.carte_id,
+        numero_carte: row.numero_carte,
         statut: row.carte_statut,
         date_generation: row.date_generation,
         date_remise: row.date_remise,
@@ -348,6 +363,15 @@ router.post(
           let statut = 'actif'; // Statut par défaut pour les adhésions importées
           // Les adhésions importées sont considérées comme nécessitant une action (génération de carte)
 
+          // Déterminer la source (en ligne ou hors ligne) depuis le statut de la commande
+          const statutCommandeLower = (statutCommande || '').toLowerCase().trim();
+          let source = 'online'; // Par défaut en ligne
+          if (statutCommandeLower.includes('hors-ligne') || statutCommandeLower.includes('hors ligne') || statutCommandeLower === 'offline') {
+            source = 'offline';
+          } else if (statutCommandeLower === 'validé' || statutCommandeLower === 'valide' || statutCommandeLower === 'validated') {
+            source = 'online';
+          }
+
           // Récupérer l'URL de la photo
           const photoUrlOriginal = record['Photo de profil'] || record.Photo || record.photo_url || null;
           
@@ -364,6 +388,7 @@ router.post(
             photo_url: photoUrlOriginal, // On téléchargera l'image lors de la validation
             photo_url_original: photoUrlOriginal, // Garder l'URL originale pour le téléchargement
             statut: statut,
+            source: source,
           };
         });
 
@@ -481,8 +506,8 @@ router.post(
                 const insertResult = await pool.query(
                   `INSERT INTO adhesions (
                     nom, prenom, email, telephone, date_adhesion,
-                    tarif, moyen_paiement, helloasso_id, helloasso_campaign_id, photo_url, statut
-                  ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                    tarif, moyen_paiement, helloasso_id, helloasso_campaign_id, photo_url, statut, source
+                  ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
                   RETURNING id`,
                   [
                     nom,
@@ -496,6 +521,7 @@ router.post(
                     record.helloasso_campaign_id || null,
                     finalPhotoUrl,
                     record.statut || 'actif',
+                    record.source || 'online',
                   ]
                 );
                 
@@ -607,10 +633,24 @@ router.post(
   }
 );
 
+// Fonction pour échapper les valeurs CSV
+function escapeCsvValue(value: any): string {
+  if (value === null || value === undefined) {
+    return '';
+  }
+  const str = String(value);
+  // Si la valeur contient une virgule, des guillemets ou un saut de ligne, l'entourer de guillemets
+  if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+    // Échapper les guillemets en les doublant
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
+}
+
 // Export CSV
 router.get('/export/csv', async (req, res) => {
   try {
-    const { annee, statut } = req.query;
+    const { annee, statut, moyen_paiement, source } = req.query;
 
     let query = 'SELECT * FROM adhesions WHERE 1=1';
     const params: any[] = [];
@@ -628,28 +668,47 @@ router.get('/export/csv', async (req, res) => {
       paramIndex++;
     }
 
+    if (moyen_paiement) {
+      query += ` AND moyen_paiement = $${paramIndex}`;
+      params.push(moyen_paiement);
+      paramIndex++;
+    }
+
+    if (source) {
+      query += ` AND source = $${paramIndex}`;
+      params.push(source);
+      paramIndex++;
+    }
+
     const result = await pool.query(query, params);
 
-    // Convertir en CSV
-    const csv = [
-      'Nom,Prénom,Email,Téléphone,Date adhésion,Tarif,Moyen de paiement,Statut',
+    // Convertir en CSV avec échappement correct
+    const csvRows = [
+      ['Nom', 'Prénom', 'Email', 'Téléphone', 'Date adhésion', 'Tarif', 'Moyen de paiement', 'Statut', 'Source', 'HelloAsso ID', 'Campagne HelloAsso'].map(escapeCsvValue).join(','),
       ...result.rows.map((row) =>
         [
           row.nom,
           row.prenom,
-          row.email,
+          row.email || '',
           row.telephone || '',
           row.date_adhesion,
           row.tarif,
-          row.moyen_paiement,
-          row.statut,
-        ].join(',')
+          row.moyen_paiement || '',
+          row.statut || '',
+          row.source || 'online',
+          row.helloasso_id || '',
+          row.helloasso_campaign_id || '',
+        ].map(escapeCsvValue).join(',')
       ),
-    ].join('\n');
+    ];
 
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename=adhesions.csv');
-    res.send(csv);
+    const csv = csvRows.join('\n');
+
+    // Ajouter le BOM UTF-8 pour Excel
+    const bom = '\uFEFF';
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename=adhesions_${new Date().toISOString().split('T')[0]}.csv`);
+    res.send(bom + csv);
   } catch (error: any) {
     logger.error('Erreur lors de l\'export CSV:', error);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -1027,6 +1086,594 @@ router.post('/helloasso/test-connection', async (req: AuthRequest, res) => {
 });
 
 // Statistiques des adhésions (pour le dashboard)
+// Fonction helper pour formater le moyen de paiement
+function formatMoyenPaiementForFacture(moyen: string): string {
+  const moyens: Record<string, string> = {
+    helloasso: 'HelloAsso',
+    especes: 'Espèces',
+    cheque: 'Chèque',
+    cb: 'Carte bancaire',
+    virement: 'Virement'
+  };
+  return moyens[moyen] || moyen;
+}
+
+// Fonction pour générer un numéro de reçu séquentiel
+async function generateReceiptNumber(): Promise<number> {
+  try {
+    // Chercher le dernier numéro de reçu utilisé (stocké dans une table ou calculé)
+    // Pour l'instant, on utilise le max ID des adhésions + 1
+    const result = await pool.query(
+      'SELECT MAX(id) as max_id FROM adhesions'
+    );
+    const maxId = result.rows[0]?.max_id || 0;
+    return maxId + 1;
+  } catch (error: any) {
+    logger.warn('Erreur lors de la génération du numéro de reçu:', error.message);
+    // Fallback: utiliser timestamp
+    return Date.now() % 100000;
+  }
+}
+
+// Fonction pour charger une image pour PDFKit
+async function loadImageForPDF(imageUrl: string | null): Promise<Buffer | null> {
+  if (!imageUrl) return null;
+  
+  try {
+    let imagePath: string;
+    
+    // Si c'est une URL locale (uploads)
+    if (imageUrl.includes('/uploads/')) {
+      const uploadsDir = path.join(__dirname, '../../uploads');
+      const urlParts = imageUrl.split('/uploads/');
+      const filename = urlParts[urlParts.length - 1];
+      imagePath = path.join(uploadsDir, filename);
+      
+      if (fs.existsSync(imagePath)) {
+        return fs.readFileSync(imagePath);
+      }
+    }
+    
+    // Si c'est une URL HTTP/HTTPS
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+      const response = await axios.get(imageUrl, {
+        responseType: 'arraybuffer',
+        timeout: 10000,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; IGCA-Backend/1.0)',
+        },
+      });
+      return Buffer.from(response.data);
+    }
+    
+    // Si c'est un chemin absolu
+    if (fs.existsSync(imageUrl)) {
+      return fs.readFileSync(imageUrl);
+    }
+    
+    return null;
+  } catch (error: any) {
+    logger.warn('Erreur lors du chargement de l\'image pour PDF:', error.message);
+    return null;
+  }
+}
+
+// Générer une attestation de paiement pour une adhésion
+router.get('/:id/attestation', async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+
+    const adhesionResult = await pool.query(
+      'SELECT * FROM adhesions WHERE id = $1',
+      [id]
+    );
+
+    if (adhesionResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Adhérent introuvable' });
+    }
+
+    const adhesion = adhesionResult.rows[0];
+
+    // Générer le numéro de reçu séquentiel
+    const receiptNumber = await generateReceiptNumber();
+    
+    // Numéro d'adhésion = HelloAsso ID (ou ID si pas de HelloAsso)
+    const membershipNumber = adhesion.helloasso_id || String(adhesion.id).padStart(6, '0');
+
+    // Générer le PDF
+    const doc = new PDFDocument({ 
+      size: 'A4',
+      margin: 0 
+    });
+    const buffers: Buffer[] = [];
+    
+    doc.on('data', buffers.push.bind(buffers));
+    doc.on('end', () => {
+      const pdfBuffer = Buffer.concat(buffers);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=attestation_paiement_${adhesion.id}_${adhesion.nom}_${adhesion.prenom}.pdf`);
+      res.send(pdfBuffer);
+    });
+
+    // Variables de design (basées sur le HTML)
+    const pageWidth = 595; // A4 width in points
+    const pageHeight = 842; // A4 height in points
+    const wrapPadding = 28; // padding du .wrap
+    const cardPadding = 16;
+    const borderColor = '#e5e7eb';
+    const textColor = '#111827';
+    const mutedColor = '#6b7280';
+    const softBg = '#f9fafb';
+    const accentColor = '#0f766e';
+    
+    let currentY = 0;
+
+    // ========== HEADER (basé sur le HTML) ==========
+    const headerHeight = 80;
+    const headerPadding = 22;
+    
+    // Fond header avec gradient (blanc vers gris très clair)
+    doc.rect(0, 0, pageWidth, headerHeight)
+      .fillColor('#ffffff')
+      .fill();
+    
+    // Gradient effect (simulé)
+    doc.rect(0, 0, pageWidth, headerHeight)
+      .fillColor('#fbfbfb')
+      .fill();
+    
+    // Bordure inférieure
+    doc.moveTo(0, headerHeight)
+      .lineTo(pageWidth, headerHeight)
+      .strokeColor(borderColor)
+      .lineWidth(1)
+      .stroke();
+
+    // Logo (gauche)
+    const logoX = wrapPadding;
+    const logoY = headerPadding;
+    const logoSize = 54;
+    
+    // Rectangle logo avec bordure arrondie (simulée)
+    doc.rect(logoX, logoY, logoSize, logoSize)
+      .fillColor(softBg)
+      .fill()
+      .strokeColor(borderColor)
+      .lineWidth(1)
+      .stroke();
+    
+    // Logo placeholder (cercle bleu)
+    doc.circle(logoX + logoSize/2, logoY + logoSize/2, logoSize/2 - 5)
+      .fillColor(accentColor)
+      .fill();
+
+    // Brand text (à droite du logo)
+    const brandX = logoX + logoSize + 14;
+    const brandY = logoY;
+    
+    doc.fontSize(16)
+      .fillColor(textColor)
+      .text('IGCA PARIS', brandX, brandY);
+    
+    doc.fontSize(12)
+      .fillColor(mutedColor)
+      .text('Indian Gujarati Cultural Association Paris', brandX, brandY + 18);
+
+    // Contact (droite)
+    const contactX = pageWidth - wrapPadding;
+    const contactY = logoY;
+    
+    const currentDate = new Date().toLocaleDateString('fr-FR', { 
+      day: '2-digit', 
+      month: '2-digit', 
+      year: 'numeric' 
+    });
+    
+    doc.fontSize(12)
+      .fillColor(mutedColor)
+      .text('Contact : contact@gujaratisamajparis.com', contactX, contactY, { align: 'right' });
+    
+    doc.fontSize(12)
+      .fillColor(mutedColor)
+      .text('Téléphone : 07 69 34 20 75', contactX, contactY + 14, { align: 'right' });
+
+    currentY = headerHeight + wrapPadding;
+
+    // ========== DOC-HEAD (Titre et métadonnées) ==========
+    const docHeadY = currentY;
+    const docHeadHeight = 80;
+    const docHeadPadding = 18;
+    
+    // Fond doc-head
+    doc.rect(wrapPadding, docHeadY, pageWidth - wrapPadding * 2, docHeadHeight)
+      .fillColor(softBg)
+      .fill()
+      .strokeColor(borderColor)
+      .lineWidth(1)
+      .stroke();
+    
+    // Titre
+    doc.fontSize(24)
+      .fillColor(textColor)
+      .text('Attestation de paiement', wrapPadding + docHeadPadding, docHeadY + docHeadPadding);
+    
+    // Sous-titre
+    doc.fontSize(13)
+      .fillColor(mutedColor)
+      .text('Document officiel certifiant le paiement de la cotisation d\'adhésion.', 
+            wrapPadding + docHeadPadding, docHeadY + docHeadPadding + 28, 
+            { width: 400 });
+
+    // Métadonnées (droite)
+    const metaX = pageWidth - wrapPadding - docHeadPadding;
+    const metaY = docHeadY + docHeadPadding;
+    
+    doc.fontSize(12)
+      .fillColor(mutedColor)
+      .text('Référence :', metaX, metaY, { align: 'right' });
+    doc.fontSize(12)
+      .fillColor(textColor)
+      .text(`IGCA-${new Date().getFullYear()}-${String(receiptNumber).padStart(6, '0')}`, metaX, metaY + 12, { align: 'right' });
+    
+    doc.fontSize(12)
+      .fillColor(mutedColor)
+      .text('Date d\'émission :', metaX, metaY + 28, { align: 'right' });
+    doc.fontSize(12)
+      .fillColor(textColor)
+      .text(currentDate, metaX, metaY + 40, { align: 'right' });
+    
+    // Badge statut
+    const statutText = adhesion.statut === 'actif' ? 'Payé' : 
+                       adhesion.statut === 'expire' ? 'Expiré' : 
+                       adhesion.statut === 'renouvele' ? 'Payé' : 'En attente';
+    const badgeColor = adhesion.statut === 'actif' || adhesion.statut === 'renouvele' ? accentColor : '#b45309';
+    
+    doc.rect(metaX - 80, metaY + 50, 80, 20)
+      .fillColor('#ffffff')
+      .fill()
+      .strokeColor(badgeColor)
+      .lineWidth(1)
+      .stroke();
+    
+    doc.fontSize(12)
+      .fillColor(badgeColor)
+      .text(`Statut : ${statutText}`, metaX, metaY + 54, { align: 'right' });
+
+    currentY = docHeadY + docHeadHeight + 14;
+
+    // ========== GRID (2 cartes côte à côte) ==========
+    const gridGap = 14;
+    const cardWidth = (pageWidth - wrapPadding * 2 - gridGap) / 2;
+    const cardHeight = 200;
+    
+    // Carte 1: Informations personnelles
+    const card1X = wrapPadding;
+    const card1Y = currentY;
+    
+    doc.rect(card1X, card1Y, cardWidth, cardHeight)
+      .fillColor('#ffffff')
+      .fill()
+      .strokeColor(borderColor)
+      .lineWidth(1)
+      .stroke();
+    
+    // Titre carte
+    doc.fontSize(14)
+      .fillColor(mutedColor)
+      .text('Informations personnelles', card1X + cardPadding, card1Y + cardPadding);
+    
+    let rowY = card1Y + cardPadding + 20;
+    const rowHeight = 30;
+    
+    // Nom et prénom
+    doc.fontSize(13)
+      .fillColor(mutedColor)
+      .text('Nom et prénom', card1X + cardPadding, rowY);
+    doc.fontSize(13)
+      .fillColor(textColor)
+      .text(`${adhesion.prenom || ''} ${(adhesion.nom || '').toUpperCase()}`, 
+            card1X + cardPadding, rowY + 12, 
+            { width: cardWidth - cardPadding * 2, align: 'right' });
+    
+    // Ligne séparatrice
+    doc.moveTo(card1X + cardPadding, rowY + 25)
+      .lineTo(card1X + cardWidth - cardPadding, rowY + 25)
+      .strokeColor(borderColor)
+      .lineWidth(0.5)
+      .stroke();
+    
+    rowY += rowHeight;
+    
+    // Email
+    if (adhesion.email) {
+      doc.fontSize(13)
+        .fillColor(mutedColor)
+        .text('Email', card1X + cardPadding, rowY);
+      doc.fontSize(13)
+        .fillColor(textColor)
+        .text(adhesion.email, card1X + cardPadding, rowY + 12, 
+              { width: cardWidth - cardPadding * 2, align: 'right' });
+      
+      doc.moveTo(card1X + cardPadding, rowY + 25)
+        .lineTo(card1X + cardWidth - cardPadding, rowY + 25)
+        .strokeColor(borderColor)
+        .lineWidth(0.5)
+        .stroke();
+      
+      rowY += rowHeight;
+    }
+    
+    // Téléphone
+    if (adhesion.telephone) {
+      doc.fontSize(13)
+        .fillColor(mutedColor)
+        .text('Téléphone', card1X + cardPadding, rowY);
+      doc.fontSize(13)
+        .fillColor(textColor)
+        .text(adhesion.telephone, card1X + cardPadding, rowY + 12, 
+              { width: cardWidth - cardPadding * 2, align: 'right' });
+      
+      doc.moveTo(card1X + cardPadding, rowY + 25)
+        .lineTo(card1X + cardWidth - cardPadding, rowY + 25)
+        .strokeColor(borderColor)
+        .lineWidth(0.5)
+        .stroke();
+      
+      rowY += rowHeight;
+    }
+    
+    // Date d'adhésion
+    if (adhesion.date_adhesion) {
+      const dateAdhesion = new Date(adhesion.date_adhesion).toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+      doc.fontSize(13)
+        .fillColor(mutedColor)
+        .text('Date d\'adhésion', card1X + cardPadding, rowY);
+      doc.fontSize(13)
+        .fillColor(textColor)
+        .text(dateAdhesion, card1X + cardPadding, rowY + 12, 
+              { width: cardWidth - cardPadding * 2, align: 'right' });
+    }
+    
+    // Carte 2: Détail de paiement
+    const card2X = card1X + cardWidth + gridGap;
+    const card2Y = currentY;
+    
+    doc.rect(card2X, card2Y, cardWidth, cardHeight)
+      .fillColor('#ffffff')
+      .fill()
+      .strokeColor(borderColor)
+      .lineWidth(1)
+      .stroke();
+    
+    // Titre carte
+    doc.fontSize(14)
+      .fillColor(mutedColor)
+      .text('Détail de paiement', card2X + cardPadding, card2Y + cardPadding);
+    
+    rowY = card2Y + cardPadding + 20;
+    
+    // Montant payé
+    const montant = typeof adhesion.tarif === 'string' ? parseFloat(adhesion.tarif) : adhesion.tarif;
+    doc.fontSize(13)
+      .fillColor(mutedColor)
+      .text('Montant payé', card2X + cardPadding, rowY);
+    doc.fontSize(13)
+      .fillColor(textColor)
+      .text(`${montant.toFixed(2)} €`, card2X + cardPadding, rowY + 12, 
+            { width: cardWidth - cardPadding * 2, align: 'right' });
+    
+    doc.moveTo(card2X + cardPadding, rowY + 25)
+      .lineTo(card2X + cardWidth - cardPadding, rowY + 25)
+      .strokeColor(borderColor)
+      .lineWidth(0.5)
+      .stroke();
+    
+    rowY += rowHeight;
+    
+    // Moyen de paiement
+    doc.fontSize(13)
+      .fillColor(mutedColor)
+      .text('Moyen de paiement', card2X + cardPadding, rowY);
+    doc.fontSize(13)
+      .fillColor(textColor)
+      .text(formatMoyenPaiementForFacture(adhesion.moyen_paiement), 
+            card2X + cardPadding, rowY + 12, 
+            { width: cardWidth - cardPadding * 2, align: 'right' });
+    
+    doc.moveTo(card2X + cardPadding, rowY + 25)
+      .lineTo(card2X + cardWidth - cardPadding, rowY + 25)
+      .strokeColor(borderColor)
+      .lineWidth(0.5)
+      .stroke();
+    
+    rowY += rowHeight;
+    
+    // Numéro d'adhésion
+    doc.fontSize(13)
+      .fillColor(mutedColor)
+      .text('Numéro d\'adhésion', card2X + cardPadding, rowY);
+    doc.fontSize(13)
+      .fillColor(textColor)
+      .text(membershipNumber, card2X + cardPadding, rowY + 12, 
+            { width: cardWidth - cardPadding * 2, align: 'right' });
+    
+    doc.moveTo(card2X + cardPadding, rowY + 25)
+      .lineTo(card2X + cardWidth - cardPadding, rowY + 25)
+      .strokeColor(borderColor)
+      .lineWidth(0.5)
+      .stroke();
+    
+    rowY += rowHeight;
+    
+    // Statut
+    doc.fontSize(13)
+      .fillColor(mutedColor)
+      .text('Statut', card2X + cardPadding, rowY);
+    doc.fontSize(13)
+      .fillColor(textColor)
+      .text(statutText, card2X + cardPadding, rowY + 12, 
+            { width: cardWidth - cardPadding * 2, align: 'right' });
+
+    currentY = card1Y + cardHeight + 16;
+
+
+    // ========== SIGNATURE (basé sur le HTML) ==========
+    const signatureGap = 14;
+    const signBox1Width = (pageWidth - wrapPadding * 2 - signatureGap) * 0.6;
+    const signBox2Width = (pageWidth - wrapPadding * 2 - signatureGap) * 0.4;
+    const signBoxHeight = 140;
+    
+    // Sign-box 1 (signature du président)
+    const signBox1X = wrapPadding;
+    const signBox1Y = currentY;
+    
+    doc.rect(signBox1X, signBox1Y, signBox1Width, signBoxHeight)
+      .fillColor('#ffffff')
+      .fill()
+      .strokeColor(borderColor)
+      .lineWidth(1)
+      .stroke();
+    
+    const signPadding = 16;
+    let signY = signBox1Y + signPadding;
+    
+    // Label président
+    doc.fontSize(12)
+      .fillColor(mutedColor)
+      .text('PRÉSIDENT', signBox1X + signPadding, signY);
+    
+    signY += 18;
+    
+    // Nom président
+    doc.fontSize(14)
+      .fillColor(textColor)
+      .text('Sanjay Parekh', signBox1X + signPadding, signY);
+    
+    // Texte à droite
+    doc.fontSize(12)
+      .fillColor(mutedColor)
+      .text('Fait pour servir et valoir ce que de droit.', 
+            signBox1X + signBox1Width - signPadding, signBox1Y + signPadding, 
+            { width: signBox1Width - signPadding * 2, align: 'right' });
+    
+    // Zone signature
+    const signImgY = signBox1Y + signBoxHeight - 90;
+    const signImgHeight = 70;
+    
+    doc.rect(signBox1X + signPadding, signImgY, signBox1Width - signPadding * 2, signImgHeight)
+      .fillColor(softBg)
+      .fill()
+      .strokeColor(borderColor)
+      .lineWidth(1)
+      .stroke();
+    
+    // Charger et afficher la signature
+    try {
+      const uploadsDir = path.join(__dirname, '../../uploads');
+      const signaturePaths = [
+        path.join(uploadsDir, 'signature.png'),
+        path.join(uploadsDir, 'president_signature.png'),
+        path.join(uploadsDir, 'signature.jpg'),
+        path.join(uploadsDir, 'president_signature.jpg'),
+      ];
+      
+      let signatureBuffer: Buffer | null = null;
+      for (const sigPath of signaturePaths) {
+        if (fs.existsSync(sigPath)) {
+          signatureBuffer = fs.readFileSync(sigPath);
+          break;
+        }
+      }
+      
+      if (signatureBuffer) {
+        doc.image(signatureBuffer, signBox1X + signPadding + 5, signImgY + 5, {
+          width: signBox1Width - signPadding * 2 - 10,
+          height: signImgHeight - 10,
+          fit: [signBox1Width - signPadding * 2 - 10, signImgHeight - 10],
+          align: 'center',
+          valign: 'center'
+        });
+      }
+    } catch (error: any) {
+      logger.warn('Erreur lors du chargement de la signature:', error.message);
+    }
+    
+    // Hint signature
+    doc.fontSize(11)
+      .fillColor(mutedColor)
+      .text('Signature et cachet (si applicable)', signBox1X + signPadding, signBox1Y + signBoxHeight - 15);
+    
+    // Sign-box 2 (note)
+    const signBox2X = signBox1X + signBox1Width + signatureGap;
+    const signBox2Y = currentY;
+    
+    doc.rect(signBox2X, signBox2Y, signBox2Width, signBoxHeight)
+      .fillColor('rgba(15,118,110,.05)')
+      .fill()
+      .strokeColor('rgba(15,118,110,.25)')
+      .lineWidth(1)
+      .stroke();
+    
+    doc.fontSize(12.5)
+      .fillColor(textColor)
+      .text('Important :', signBox2X + signPadding, signBox2Y + signPadding, { continued: true });
+    doc.fontSize(12.5)
+      .fillColor(accentColor)
+      .text('Important :', signBox2X + signPadding, signBox2Y + signPadding);
+    
+    doc.fontSize(12.5)
+      .fillColor(textColor)
+      .text('ce document est édité à partir des informations transmises lors du paiement. En cas d\'erreur, merci de contacter l\'association.', 
+            signBox2X + signPadding, signBox2Y + signPadding + 18, 
+            { width: signBox2Width - signPadding * 2, lineGap: 3 });
+
+    currentY = signBox1Y + signBoxHeight + 18;
+
+    // ========== FOOTER (basé sur le HTML) ==========
+    if (currentY > 750) {
+      doc.addPage();
+      currentY = 50;
+    }
+    
+    const footerY = Math.max(currentY, 750);
+    const footerPadding = 18;
+    
+    // Ligne de séparation footer
+    doc.moveTo(0, footerY)
+      .lineTo(pageWidth, footerY)
+      .strokeColor(borderColor)
+      .lineWidth(1)
+      .stroke();
+    
+    // Fond footer
+    doc.rect(0, footerY, pageWidth, pageHeight - footerY)
+      .fillColor('#ffffff')
+      .fill();
+
+    doc.fontSize(11)
+      .fillColor(mutedColor)
+      .text(
+        'Cette association, enregistrée sous le numéro 96.12339-RNA W931007370, est régie par la loi n° 1901-IV du 1er juillet 1901 et le décret n° 1901-1 du 16 août 1901, avec le numéro SIRET 91199334300019. Le siège social de l\'association Indian Gujarati Cultural Association Paris est situé au 49 avenue Gambetta, 93170 Bagnolet. Cette cotisation ou ce don n\'est pas déductible d\'impôt.',
+        wrapPadding,
+        footerY + footerPadding,
+        {
+          width: pageWidth - wrapPadding * 2,
+          align: 'justify',
+          lineGap: 3
+        }
+      );
+
+    doc.end();
+  } catch (error: any) {
+    logger.error('Erreur lors de la génération de l\'attestation:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 router.get('/stats', async (req, res) => {
   try {
     const { annee } = req.query;

@@ -16,7 +16,7 @@
       <div class="hero-image">
         <div class="floating-card">
           <div class="card-header">
-            <span class="card-icon">🎫</span>
+            <span class="card-icon"><span class="material-symbols-outlined">confirmation_number</span></span>
             <span class="card-title">Carte Membre</span>
           </div>
           <div class="card-body">
@@ -33,32 +33,32 @@
         <h2 class="section-title">Fonctionnalités principales</h2>
         <div class="features-grid">
           <div class="feature-card">
-            <div class="feature-icon">📊</div>
+            <div class="feature-icon"><span class="material-symbols-outlined">dashboard</span></div>
             <h3>Gestion des adhésions</h3>
             <p>Import automatique depuis HelloAsso, gestion intelligente des doublons, suivi complet des adhérents avec historique</p>
           </div>
           <div class="feature-card">
-            <div class="feature-icon">🎴</div>
+            <div class="feature-icon"><span class="material-symbols-outlined">badge</span></div>
             <h3>Cartes membres</h3>
             <p>Génération automatique des cartes, suivi de remise en temps réel, téléchargement PDF haute qualité</p>
           </div>
           <div class="feature-card">
-            <div class="feature-icon">✅</div>
+            <div class="feature-icon"><span class="material-symbols-outlined">verified</span></div>
             <h3>Vérification rapide</h3>
             <p>Vérification d'adhésion en temps réel depuis mobile ou web, recherche par nom, email ou numéro de carte</p>
           </div>
           <div class="feature-card">
-            <div class="feature-icon">💰</div>
+            <div class="feature-icon"><span class="material-symbols-outlined">account_balance_wallet</span></div>
             <h3>Comptabilité</h3>
             <p>Séparation automatique adhésions/dons, exports comptables, statistiques détaillées par période</p>
           </div>
           <div class="feature-card">
-            <div class="feature-icon">🍽️</div>
+            <div class="feature-icon"><span class="material-symbols-outlined">restaurant_menu</span></div>
             <h3>Menu du jour</h3>
             <p>Gestion du menu des événements, affichage des prix, gestion de la disponibilité, duplication rapide</p>
           </div>
           <div class="feature-card">
-            <div class="feature-icon">👥</div>
+            <div class="feature-icon"><span class="material-symbols-outlined">groups</span></div>
             <h3>Gestion des rôles</h3>
             <p>Rôles personnalisés pour bénévoles, permissions granulaires, traçabilité complète des actions</p>
           </div>
@@ -72,28 +72,28 @@
         <h2 class="section-title">Pourquoi choisir cette plateforme ?</h2>
         <div class="benefits-list">
           <div class="benefit-item">
-            <div class="benefit-icon">⚡</div>
+            <div class="benefit-icon"><span class="material-symbols-outlined">bolt</span></div>
             <div class="benefit-content">
               <h3>Gain de temps considérable</h3>
               <p>Fini les traitements manuels répétitifs. Automatisation complète des processus d'import, de génération de cartes et de suivi</p>
             </div>
           </div>
           <div class="benefit-item">
-            <div class="benefit-icon">🔒</div>
+            <div class="benefit-icon"><span class="material-symbols-outlined">lock</span></div>
             <div class="benefit-content">
               <h3>Sécurisé et conforme</h3>
               <p>Authentification robuste, gestion fine des rôles et permissions, conformité totale RGPD</p>
             </div>
           </div>
           <div class="benefit-item">
-            <div class="benefit-icon">📱</div>
+            <div class="benefit-icon"><span class="material-symbols-outlined">smartphone</span></div>
             <div class="benefit-content">
               <h3>Multi-plateforme</h3>
               <p>Application mobile iOS/Android et interface web responsive, accessible partout, tout le temps</p>
             </div>
           </div>
           <div class="benefit-item">
-            <div class="benefit-icon">🎯</div>
+            <div class="benefit-icon"><span class="material-symbols-outlined">target</span></div>
             <div class="benefit-content">
               <h3>100% centralisé</h3>
               <p>Toutes vos données en un seul endroit, synchronisées en temps réel, accessible par tous les bénévoles autorisés</p>
@@ -350,6 +350,12 @@
   margin-bottom: 20px;
 }
 
+.feature-icon .material-symbols-outlined {
+  font-size: 48px;
+  width: 48px;
+  height: 48px;
+}
+
 .feature-card h3 {
   font-size: 24px;
   margin-bottom: 15px;
@@ -386,6 +392,12 @@
 .benefit-icon {
   font-size: 64px;
   flex-shrink: 0;
+}
+
+.benefit-icon .material-symbols-outlined {
+  font-size: 64px;
+  width: 64px;
+  height: 64px;
 }
 
 .benefit-content h3 {

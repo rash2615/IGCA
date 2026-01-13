@@ -7,7 +7,7 @@
           <h1>IGCA Paris</h1>
         </div>
         <button @click="toggleSidebar" class="toggle-btn" :title="sidebarCollapsed ? 'Agrandir' : 'Réduire'">
-          {{ sidebarCollapsed ? '→' : '←' }}
+          <span class="material-symbols-outlined">{{ sidebarCollapsed ? 'chevron_right' : 'chevron_left' }}</span>
         </button>
       </div>
 
@@ -29,14 +29,14 @@
           class="nav-item"
           :class="{ active: $route.path === item.path }"
         >
-          <span class="nav-icon">{{ item.icon }}</span>
+          <span class="nav-icon"><span class="material-symbols-outlined">{{ item.icon }}</span></span>
           <span v-if="!sidebarCollapsed" class="nav-label">{{ item.label }}</span>
         </router-link>
       </nav>
 
       <div class="sidebar-footer">
         <button @click="handleLogout" class="logout-btn">
-          <span class="nav-icon">🚪</span>
+          <span class="nav-icon"><span class="material-symbols-outlined">logout</span></span>
           <span v-if="!sidebarCollapsed">Déconnexion</span>
         </button>
       </div>
@@ -101,16 +101,16 @@ function formatRole(role?: string) {
   const menuItems = computed(() => {
     // AUTHENTIFICATION DÉSACTIVÉE - Afficher tous les menus
     const allItems = [
-      { path: '/app/dashboard', label: 'Tableau de bord', icon: '📊', roles: ['admin', 'super_admin'] },
-      { path: '/app/adhesions', label: 'Adhésions', icon: '👥', roles: ['admin', 'super_admin'] },
-      { path: '/app/cartes', label: 'Cartes membres', icon: '🎴', roles: ['admin', 'super_admin'] },
-      { path: '/app/verification', label: 'Vérification', icon: '✅', roles: ['admin', 'super_admin', 'benevole'] },
-      { path: '/app/transmission', label: 'Transmission', icon: '📤', roles: ['admin', 'super_admin', 'benevole'] },
-      { path: '/app/comptabilite', label: 'Comptabilité', icon: '💰', roles: ['admin', 'super_admin'] },
-      { path: '/app/dons', label: 'Dons', icon: '💝', roles: ['admin', 'super_admin'] },
-      { path: '/app/menu', label: 'Menu du jour', icon: '🍽️', roles: ['admin', 'super_admin', 'benevole', 'membre'] },
-      { path: '/app/roles', label: 'Rôles', icon: '👤', roles: ['admin', 'super_admin'] },
-      { path: '/app/users', label: 'Utilisateurs', icon: '👥', roles: ['admin', 'super_admin'] },
+      { path: '/app/dashboard', label: 'Tableau de bord', icon: 'dashboard', roles: ['admin', 'super_admin'] },
+      { path: '/app/adhesions', label: 'Adhésions', icon: 'groups', roles: ['admin', 'super_admin'] },
+      { path: '/app/cartes', label: 'Cartes membres', icon: 'badge', roles: ['admin', 'super_admin'] },
+      { path: '/app/verification', label: 'Vérification', icon: 'verified', roles: ['admin', 'super_admin', 'benevole'] },
+      { path: '/app/transmission', label: 'Transmission', icon: 'send', roles: ['admin', 'super_admin', 'benevole'] },
+      { path: '/app/comptabilite', label: 'Comptabilité', icon: 'account_balance_wallet', roles: ['admin', 'super_admin'] },
+      { path: '/app/dons', label: 'Dons', icon: 'favorite', roles: ['admin', 'super_admin'] },
+      { path: '/app/menu', label: 'Menu du jour', icon: 'restaurant_menu', roles: ['admin', 'super_admin', 'benevole', 'membre'] },
+      { path: '/app/roles', label: 'Rôles', icon: 'admin_panel_settings', roles: ['admin', 'super_admin'] },
+      { path: '/app/users', label: 'Utilisateurs', icon: 'people', roles: ['admin', 'super_admin'] },
     ];
 
     // AUTHENTIFICATION DÉSACTIVÉE - Retourner tous les items
@@ -266,6 +266,12 @@ function handleLogout() {
   width: 24px;
   text-align: center;
   flex-shrink: 0;
+}
+
+.nav-icon .material-symbols-outlined {
+  font-size: 20px;
+  width: 24px;
+  height: 24px;
 }
 
 .nav-label {

@@ -17,7 +17,7 @@
 
     <div v-if="result" class="result">
       <div v-if="result.found" :class="['result-card', result.valid ? 'valid' : 'invalid']">
-        <h2>{{ result.valid ? '✅ Adhésion valide' : '❌ Adhésion expirée' }}</h2>
+        <h2><span class="material-symbols-outlined" style="vertical-align: middle; margin-right: 5px;">{{ result.valid ? 'check_circle' : 'cancel' }}</span> {{ result.valid ? 'Adhésion valide' : 'Adhésion expirée' }}</h2>
         <div class="result-info">
           <p><strong>Nom :</strong> {{ result.data.nom }} {{ result.data.prenom }}</p>
           <p><strong>Email :</strong> {{ result.data.email }}</p>

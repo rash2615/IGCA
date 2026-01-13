@@ -17,6 +17,7 @@
     "axios": "^1.6.5",
     "chart.js": "^4.5.1",
     "cropperjs": "^2.1.0",
+    "material-symbols": "^0.40.2",
     "pinia": "^2.1.7",
     "vue": "^3.4.15",
     "vue-chartjs": "^5.3.3",
