@@ -47,3 +47,6 @@ mobile/android/.gradle/
 # Frontend admin (Vue.js) - node_modules uniquement
 frontend-admin/node_modules/
 
+# Files 
+uploads/
+export-igcaparis-indian-gujarati-cultural-association-paris-27_03_2024-12_01_2026.csv
