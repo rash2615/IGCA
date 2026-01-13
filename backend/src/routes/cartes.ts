@@ -89,17 +89,18 @@ router.post(
 
       const adhesion = adhesionResult.rows[0];
 
-      // Vérifier si une carte existe déjà
-      const existingCarte = await pool.query(
-        'SELECT id FROM cartes WHERE adhesion_id = $1 AND statut != $2',
-        [adhesionId, 'remise']
+      // Vérifier si une carte existe déjà (toutes les cartes, y compris délivrées)
+      const existingCartes = await pool.query(
+        'SELECT id, statut, numero_carte FROM cartes WHERE adhesion_id = $1',
+        [adhesionId]
       );
 
-      if (existingCarte.rows.length > 0) {
-        return res.status(400).json({
-          error: 'Une carte existe déjà pour cet adhérent',
-          carteId: existingCarte.rows[0].id,
-        });
+      // Si des cartes existent, les supprimer pour permettre la régénération
+      if (existingCartes.rows.length > 0) {
+        for (const carte of existingCartes.rows) {
+          await pool.query('DELETE FROM cartes WHERE id = $1', [carte.id]);
+          logger.info(`🗑️  Carte ${carte.numero_carte} (statut: ${carte.statut}) supprimée pour permettre la régénération pour l'adhérent ${adhesionId}`);
+        }
       }
 
       // Vérifier que l'adhésion est complète avant de générer la carte
@@ -238,6 +239,41 @@ router.get('/me/carte', async (req: AuthRequest, res) => {
     });
   } catch (error: any) {
     logger.error('Erreur lors de la récupération de la carte:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Supprimer une carte
+router.delete('/:id', async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+
+    // Vérifier que la carte existe
+    const carteResult = await pool.query(
+      `SELECT c.*, a.nom, a.prenom 
+       FROM cartes c
+       JOIN adhesions a ON c.adhesion_id = a.id
+       WHERE c.id = $1`,
+      [id]
+    );
+
+    if (carteResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Carte introuvable' });
+    }
+
+    const carte = carteResult.rows[0];
+
+    // Supprimer la carte
+    await pool.query('DELETE FROM cartes WHERE id = $1', [id]);
+
+    logger.info(`Carte ${id} supprimée: ${carte.numero_carte} pour ${carte.prenom} ${carte.nom}`);
+
+    res.json({
+      success: true,
+      message: 'Carte supprimée avec succès',
+    });
+  } catch (error: any) {
+    logger.error('Erreur lors de la suppression de la carte:', error);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });

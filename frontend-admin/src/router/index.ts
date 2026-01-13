@@ -66,28 +66,8 @@ const appRoutes = [
         name: 'cartes',
         component: () => import('@/views/CartesView.vue'),
         meta: { 
-          title: 'Cartes membres',
+          title: 'Cartes membres & Vérification',
           icon: 'badge',
-          roles: ['admin', 'super_admin']
-        },
-      },
-      {
-        path: 'verification',
-        name: 'verification',
-        component: () => import('@/views/VerificationView.vue'),
-        meta: { 
-          title: 'Vérification',
-          icon: 'verified',
-          roles: ['admin', 'super_admin', 'benevole']
-        },
-      },
-      {
-        path: 'transmission',
-        name: 'transmission',
-        component: () => import('@/views/TransmissionView.vue'),
-        meta: { 
-          title: 'Transmission',
-          icon: 'send',
           roles: ['admin', 'super_admin', 'benevole']
         },
       },

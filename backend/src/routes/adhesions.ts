@@ -101,7 +101,15 @@ router.get('/', async (req: AuthRequest, res) => {
         a.created_at,
         c.id as carte_id,
         c.numero_carte,
-        c.statut as carte_statut
+        c.statut as carte_statut,
+        CASE 
+          WHEN EXISTS (
+            SELECT 1 FROM cartes c2 
+            WHERE c2.adhesion_id = a.id 
+            AND c2.statut = 'remise'
+          ) THEN true 
+          ELSE false 
+        END as carte_delivree
       FROM adhesions a
       LEFT JOIN cartes c ON a.id = c.adhesion_id AND c.statut != 'remise'
       WHERE 1=1

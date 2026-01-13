@@ -103,9 +103,7 @@ function formatRole(role?: string) {
     const allItems = [
       { path: '/app/dashboard', label: 'Tableau de bord', icon: 'dashboard', roles: ['admin', 'super_admin'] },
       { path: '/app/adhesions', label: 'Adhésions', icon: 'groups', roles: ['admin', 'super_admin'] },
-      { path: '/app/cartes', label: 'Cartes membres', icon: 'badge', roles: ['admin', 'super_admin'] },
-      { path: '/app/verification', label: 'Vérification', icon: 'verified', roles: ['admin', 'super_admin', 'benevole'] },
-      { path: '/app/transmission', label: 'Transmission', icon: 'send', roles: ['admin', 'super_admin', 'benevole'] },
+      { path: '/app/cartes', label: 'Cartes membres & Vérification', icon: 'badge', roles: ['admin', 'super_admin', 'benevole'] },
       { path: '/app/comptabilite', label: 'Comptabilité', icon: 'account_balance_wallet', roles: ['admin', 'super_admin'] },
       { path: '/app/dons', label: 'Dons', icon: 'favorite', roles: ['admin', 'super_admin'] },
       { path: '/app/menu', label: 'Menu du jour', icon: 'restaurant_menu', roles: ['admin', 'super_admin', 'benevole', 'membre'] },

@@ -142,6 +142,8 @@ export const cartesApi = {
   download: (id: number, format: string = 'pdf') =>
     api.get(`/cartes/${id}/download?format=${format}`, { responseType: 'blob' }),
   me: () => api.get('/cartes/me/carte'),
+  markAsDelivered: (id: number) => api.post(`/transmission/${id}/remise`),
+  delete: (id: number) => api.delete(`/cartes/${id}`),
 };
 
 export const verificationApi = {
