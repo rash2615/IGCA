@@ -186,7 +186,16 @@
                 </div>
               </div>
               <div class="card-info">
-                <h3 class="card-name">{{ adhesion.prenom }} {{ adhesion.nom }}</h3>
+                <h3 class="card-name">
+                  {{ adhesion.prenom }} {{ adhesion.nom }}
+                  <span 
+                    v-if="adhesion.carte_delivree" 
+                    class="carte-delivree-badge" 
+                    title="Carte délivrée"
+                  >
+                    <span class="material-symbols-outlined">check_circle</span>
+                  </span>
+                </h3>
                 <p class="card-email">{{ adhesion.email }}</p>
               </div>
             </div>
@@ -1389,6 +1398,9 @@ onMounted(async () => {
 }
 
 .card-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0 0 4px 0;
   font-size: 16px;
   font-weight: 600;
@@ -1396,6 +1408,24 @@ onMounted(async () => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.carte-delivree-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #059669;
+  background: #d1fae5;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+
+.carte-delivree-badge .material-symbols-outlined {
+  font-size: 16px;
+  font-weight: 600;
 }
 
 .card-email {
