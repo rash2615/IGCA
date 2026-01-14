@@ -1,9 +1,19 @@
 import express from 'express';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth';
 import { pool } from '../config/database';
 import { logger } from '../utils/logger';
 
 const router = express.Router();
+const upload = multer({ dest: 'uploads/', limits: { fileSize: 10 * 1024 * 1024 } });
+
+// Créer le dossier uploads s'il n'existe pas
+const uploadsDir = path.join(__dirname, '../../uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
 // Menu du jour
 router.get('/jour', async (req, res) => {
@@ -21,7 +31,9 @@ router.get('/jour', async (req, res) => {
             'nom', p.nom,
             'description', p.description,
             'prix', p.prix,
-            'disponible', p.disponible
+            'disponible', p.disponible,
+            'quantite', p.quantite,
+            'image_url', p.image_url
           )
         ) as plats
        FROM menus m
@@ -96,14 +108,28 @@ router.post(
           platId = platResult.rows[0].id;
           // Mettre à jour le plat
           await pool.query(
-            'UPDATE plats SET description = $1, prix = $2, disponible = $3 WHERE id = $4',
-            [plat.description || null, plat.prix, plat.disponible !== false, platId]
+            'UPDATE plats SET description = $1, prix = $2, disponible = $3, quantite = $4, image_url = $5 WHERE id = $6',
+            [
+              plat.description || null,
+              plat.prix,
+              plat.disponible !== false,
+              plat.quantite || 0, // Quantité non utilisée, toujours 0
+              plat.image_url || null,
+              platId
+            ]
           );
         } else {
           // Créer un nouveau plat
           const newPlatResult = await pool.query(
-            'INSERT INTO plats (nom, description, prix, disponible) VALUES ($1, $2, $3, $4) RETURNING id',
-            [plat.nom, plat.description || null, plat.prix, plat.disponible !== false]
+            'INSERT INTO plats (nom, description, prix, disponible, quantite, image_url) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
+            [
+              plat.nom,
+              plat.description || null,
+              plat.prix,
+              plat.disponible !== false,
+              plat.quantite || 0, // Quantité non utilisée, toujours 0
+              plat.image_url || null
+            ]
           );
           platId = newPlatResult.rows[0].id;
         }
@@ -213,6 +239,213 @@ router.get(
     }
   }
 );
+
+// Liste tous les plats
+router.get('/plats', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM plats ORDER BY nom ASC'
+    );
+
+    res.json({
+      success: true,
+      data: result.rows,
+    });
+  } catch (error: any) {
+    logger.error('Erreur lors de la récupération des plats:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Détails d'un plat
+router.get('/plats/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      'SELECT * FROM plats WHERE id = $1',
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Plat introuvable' });
+    }
+
+    res.json({
+      success: true,
+      data: result.rows[0],
+    });
+  } catch (error: any) {
+    logger.error('Erreur lors de la récupération du plat:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Créer un plat
+router.post('/plats', upload.single('image'), async (req: AuthRequest, res) => {
+  try {
+    const { nom, description, prix, disponible, quantite, image_url } = req.body;
+
+    if (!nom || !prix) {
+      return res.status(400).json({ error: 'Nom et prix requis' });
+    }
+
+    let imageUrl = null;
+    // Priorité à l'URL fournie, sinon utiliser le fichier uploadé
+    if (image_url && image_url.trim() !== '') {
+      imageUrl = image_url.trim();
+    } else if (req.file) {
+      imageUrl = `/uploads/${req.file.filename}`;
+    }
+
+    const result = await pool.query(
+      `INSERT INTO plats (nom, description, prix, disponible, quantite, image_url)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING *`,
+      [
+        nom,
+        description || null,
+        parseFloat(prix),
+        disponible !== 'false' && disponible !== false,
+        parseInt(quantite || '0'),
+        imageUrl
+      ]
+    );
+
+    logger.info(`Plat créé: ${result.rows[0].id}`);
+    res.status(201).json({
+      success: true,
+      data: result.rows[0],
+    });
+  } catch (error: any) {
+    logger.error('Erreur lors de la création du plat:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Modifier un plat
+router.put('/plats/:id', upload.single('image'), async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+    const { nom, description, prix, disponible, quantite, image_url } = req.body;
+
+    let imageUrl = image_url || null;
+    if (req.file) {
+      imageUrl = `/uploads/${req.file.filename}`;
+    }
+
+    const result = await pool.query(
+      `UPDATE plats 
+       SET nom = $1, description = $2, prix = $3, disponible = $4, quantite = $5, image_url = $6, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $7
+       RETURNING *`,
+      [
+        nom,
+        description || null,
+        parseFloat(prix),
+        disponible !== 'false' && disponible !== false,
+        parseInt(quantite || '0'), // Quantité non utilisée, toujours 0
+        imageUrl,
+        id
+      ]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Plat introuvable' });
+    }
+
+    logger.info(`Plat modifié: ${id}`);
+    res.json({
+      success: true,
+      data: result.rows[0],
+    });
+  } catch (error: any) {
+    logger.error('Erreur lors de la modification du plat:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Supprimer un plat
+router.delete('/plats/:id', async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      'DELETE FROM plats WHERE id = $1 RETURNING *',
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Plat introuvable' });
+    }
+
+    // Supprimer l'image si elle existe
+    if (result.rows[0].image_url) {
+      const imagePath = path.join(uploadsDir, result.rows[0].image_url.replace('/uploads/', ''));
+      if (fs.existsSync(imagePath)) {
+        fs.unlinkSync(imagePath);
+      }
+    }
+
+    logger.info(`Plat supprimé: ${id}`);
+    res.json({
+      success: true,
+      message: 'Plat supprimé avec succès',
+    });
+  } catch (error: any) {
+    logger.error('Erreur lors de la suppression du plat:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Récupérer un menu par date
+router.get('/date/:date', async (req, res) => {
+  try {
+    const { date } = req.params;
+
+    const result = await pool.query(
+      `SELECT 
+        m.id,
+        m.date_menu,
+        m.created_at,
+        json_agg(
+          json_build_object(
+            'id', p.id,
+            'nom', p.nom,
+            'description', p.description,
+            'prix', p.prix,
+            'disponible', p.disponible,
+            'quantite', p.quantite,
+            'image_url', p.image_url
+          )
+        ) FILTER (WHERE p.id IS NOT NULL) as plats
+       FROM menus m
+       LEFT JOIN menu_plats mp ON m.id = mp.menu_id
+       LEFT JOIN plats p ON mp.plat_id = p.id
+       WHERE m.date_menu = $1
+       GROUP BY m.id, m.date_menu, m.created_at
+       ORDER BY m.created_at DESC
+       LIMIT 1`,
+      [date]
+    );
+
+    if (result.rows.length === 0) {
+      return res.json({
+        success: true,
+        data: null,
+        message: 'Aucun menu disponible pour cette date',
+      });
+    }
+
+    res.json({
+      success: true,
+      data: result.rows[0],
+    });
+  } catch (error: any) {
+    logger.error('Erreur lors de la récupération du menu:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
 
 export default router;
 

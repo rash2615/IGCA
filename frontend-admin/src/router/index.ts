@@ -92,6 +92,16 @@ const appRoutes = [
         },
       },
       {
+        path: 'dons/:id',
+        name: 'don-detail',
+        component: () => import('@/views/DonDetailView.vue'),
+        meta: { 
+          title: 'Détails don',
+          icon: 'favorite',
+          roles: ['admin', 'super_admin']
+        },
+      },
+      {
         path: 'menu',
         name: 'menu',
         component: () => import('@/views/MenuView.vue'),

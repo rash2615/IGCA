@@ -24,14 +24,23 @@ api.interceptors.request.use((config) => {
 // Intercepteur pour gérer les erreurs
 api.interceptors.response.use(
   (response) => {
-    console.log('✅ Réponse API reçue:', {
-      url: response.config.url,
-      status: response.status,
-      method: response.config.method?.toUpperCase()
-    });
+    // Ne pas logger pour les blobs (trop volumineux)
+    if (response.config.responseType !== 'blob') {
+      console.log('✅ Réponse API reçue:', {
+        url: response.config.url,
+        status: response.status,
+        method: response.config.method?.toUpperCase()
+      });
+    } else {
+      console.log('✅ Blob reçu:', {
+        url: response.config.url,
+        status: response.status,
+        size: response.data?.size || 'unknown'
+      });
+    }
     return response;
   },
-  (error) => {
+  async (error) => {
     // Gérer les erreurs réseau (pas de réponse du serveur)
     if (!error.response) {
       console.error('❌ Erreur réseau - Backend inaccessible:', {
@@ -49,6 +58,18 @@ api.interceptors.response.use(
         error.userMessage = 'Erreur de connexion au serveur.';
       }
     } else {
+      // Si c'est une réponse blob mais avec une erreur, essayer de lire le message d'erreur
+      if (error.config?.responseType === 'blob' && error.response.data instanceof Blob) {
+        try {
+          const text = await error.response.data.text();
+          const json = JSON.parse(text);
+          error.response.data = json;
+          error.userMessage = json.error || 'Erreur lors du téléchargement';
+        } catch (e) {
+          // Si ce n'est pas du JSON, garder le blob tel quel
+        }
+      }
+      
       console.error('❌ Erreur API:', {
         url: error.config?.url,
         status: error.response?.status,
@@ -161,13 +182,47 @@ export const transmissionApi = {
 
 export const comptabiliteApi = {
   overview: (params?: any) => api.get('/comptabilite/overview', { params }),
+  overviewComplete: (params?: any) => api.get('/comptabilite/overview-complete', { params }),
   tarifs: (params?: any) => api.get('/comptabilite/adhesions/tarifs', { params }),
   export: (params?: any) => api.get('/comptabilite/export/csv', { params, responseType: 'blob' }),
   paiementsAnnee: (annee?: string) => api.get('/comptabilite/paiements-annee', { params: { annee } }),
+  // Dépenses
+  depenses: {
+    list: (params?: any) => api.get('/comptabilite/depenses', { params }),
+    create: (data: any) => api.post('/comptabilite/depenses', data),
+    update: (id: number, data: any) => api.put(`/comptabilite/depenses/${id}`, data),
+    delete: (id: number) => api.delete(`/comptabilite/depenses/${id}`),
+    stats: (params?: any) => api.get('/comptabilite/depenses/stats', { params }),
+  },
+  depensesCategories: {
+    list: () => api.get('/comptabilite/depenses/categories'),
+    create: (data: any) => api.post('/comptabilite/depenses/categories', data),
+  },
+  // Crédits
+  credits: {
+    list: (params?: any) => api.get('/comptabilite/credits', { params }),
+    create: (data: any) => api.post('/comptabilite/credits', data),
+    update: (id: number, data: any) => api.put(`/comptabilite/credits/${id}`, data),
+    delete: (id: number) => api.delete(`/comptabilite/credits/${id}`),
+  },
+  // Bilans
+  bilans: {
+    list: (params?: any) => api.get('/comptabilite/bilans', { params }),
+    get: (id: number) => api.get(`/comptabilite/bilans/${id}`),
+    generate: (data: any) => api.post('/comptabilite/bilans/generate', data),
+    delete: (id: number) => api.delete(`/comptabilite/bilans/${id}`),
+    pdf: (id: number) => api.get(`/comptabilite/bilans/${id}/pdf`, { responseType: 'blob' }),
+    excel: (id: number) => api.get(`/comptabilite/bilans/${id}/excel`, { responseType: 'blob' }),
+  },
 };
 
 export const donsApi = {
   list: (params?: any) => api.get('/dons', { params }),
+  get: (id: number) => api.get(`/dons/${id}`),
+  create: (data: any) => api.post('/dons', data),
+  update: (id: number, data: any) => api.put(`/dons/${id}`, data),
+  delete: (id: number) => api.delete(`/dons/${id}`),
+  stats: (params?: any) => api.get('/dons/stats', { params }),
   recent: (limit?: number) => api.get('/dons/recent', { params: { limit } }),
   import: (file: File) => {
     const formData = new FormData();
@@ -178,14 +233,28 @@ export const donsApi = {
   },
   validateImport: (importId: number, data: any) =>
     api.post(`/dons/import/${importId}/validate`, data),
+  exportCsv: (params?: any) => api.get('/dons/export/csv', { params, responseType: 'blob' }),
 };
 
 export const menuApi = {
   jour: () => api.get('/menu/jour'),
+  getByDate: (date: string) => api.get(`/menu/date/${date}`),
   create: (data: any) => api.post('/menu', data),
   duplicate: (menuId: number, dateMenu: string) =>
     api.post(`/menu/${menuId}/duplicate`, { date_menu: dateMenu }),
   historique: (limit?: number) => api.get('/menu/historique', { params: { limit } }),
+  // Plats
+  plats: {
+    list: () => api.get('/menu/plats'),
+    get: (id: number) => api.get(`/menu/plats/${id}`),
+    create: (data: FormData) => api.post('/menu/plats', data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+    update: (id: number, data: FormData) => api.put(`/menu/plats/${id}`, data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+    delete: (id: number) => api.delete(`/menu/plats/${id}`),
+  },
 };
 
 export const rolesApi = {
