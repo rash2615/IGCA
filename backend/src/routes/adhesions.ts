@@ -806,19 +806,35 @@ router.post('/', upload.single('photo'), async (req: AuthRequest, res) => {
 router.put('/:id', upload.single('photo'), async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
-    const {
-      nom,
-      prenom,
-      email,
-      telephone,
-      date_adhesion,
-      tarif,
-      moyen_paiement,
-      statut,
-      helloasso_id,
-      helloasso_campaign_id,
-      photo_url,
-    } = req.body;
+    
+    // Parser le body - multer peut affecter le parsing, donc on doit gérer les deux cas
+    let bodyData = req.body;
+    
+    // Si le body est une chaîne (peut arriver avec multer), essayer de le parser
+    if (typeof bodyData === 'string') {
+      try {
+        bodyData = JSON.parse(bodyData);
+      } catch (e) {
+        // Si ce n'est pas du JSON, utiliser req.body tel quel
+      }
+    }
+    
+    // Extraire les valeurs du body (peut être un objet ou des champs séparés avec multer)
+    const nom = bodyData.nom || req.body.nom;
+    const prenom = bodyData.prenom || req.body.prenom;
+    const email = bodyData.email || req.body.email;
+    const telephone = bodyData.telephone || req.body.telephone;
+    const date_adhesion = bodyData.date_adhesion || req.body.date_adhesion;
+    const tarif = bodyData.tarif !== undefined ? bodyData.tarif : req.body.tarif;
+    const moyen_paiement = bodyData.moyen_paiement || req.body.moyen_paiement;
+    const statut = bodyData.statut || req.body.statut;
+    const helloasso_id = bodyData.helloasso_id || req.body.helloasso_id;
+    const helloasso_campaign_id = bodyData.helloasso_campaign_id || req.body.helloasso_campaign_id;
+    const photo_url = bodyData.photo_url || req.body.photo_url;
+    
+    logger.info(`Mise à jour adhésion ${id} - statut reçu: "${statut}" (type: ${typeof statut})`);
+    logger.info(`Body complet:`, JSON.stringify(req.body));
+    logger.info(`BodyData:`, JSON.stringify(bodyData));
     
     // Gérer l'upload de photo si un fichier est fourni
     let finalPhotoUrl = photo_url;
@@ -873,9 +889,10 @@ router.put('/:id', upload.single('photo'), async (req: AuthRequest, res) => {
       updates.push(`moyen_paiement = $${paramIndex++}`);
       values.push(moyen_paiement);
     }
-    if (statut !== undefined) {
+    if (statut !== undefined && statut !== null && statut !== '') {
       updates.push(`statut = $${paramIndex++}`);
       values.push(statut);
+      logger.info(`Mise à jour statut pour adhésion ${id}: ${statut}`);
     }
     if (helloasso_id !== undefined) {
       updates.push(`helloasso_id = $${paramIndex++}`);
@@ -891,8 +908,11 @@ router.put('/:id', upload.single('photo'), async (req: AuthRequest, res) => {
     }
 
     if (updates.length === 0) {
+      logger.warn(`Tentative de mise à jour adhésion ${id} sans aucun champ`);
       return res.status(400).json({ error: 'Aucun champ à mettre à jour' });
     }
+    
+    logger.info(`Mise à jour adhésion ${id} - ${updates.length} champ(s) à mettre à jour:`, updates);
 
     updates.push(`updated_at = CURRENT_TIMESTAMP`);
     values.push(id);
@@ -915,8 +935,24 @@ router.put('/:id', upload.single('photo'), async (req: AuthRequest, res) => {
     if (error.code === '23505') {
       return res.status(400).json({ error: 'Cette adhésion existe déjà (conflit unique)' });
     }
+    if (error.code === '23514') {
+      // Erreur de contrainte CHECK - statut invalide
+      logger.error(`Statut invalide pour adhésion ${id}:`, statut);
+      return res.status(400).json({ 
+        error: 'Statut invalide', 
+        details: `Le statut "${statut}" n'est pas autorisé. Statuts valides: actif, expire, renouvele, inactif, suspendu, banni, a_generer` 
+      });
+    }
     logger.error('Erreur lors de la mise à jour de l\'adhésion:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    logger.error('Détails erreur:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+      body: req.body,
+      params: req.params,
+      statut: statut
+    });
+    res.status(500).json({ error: 'Erreur serveur', details: error.message });
   }
 });
 
@@ -1693,21 +1729,22 @@ router.get('/stats', async (req, res) => {
     const statsResult = await pool.query(
       `SELECT 
         COUNT(*) as total,
-        COUNT(*) FILTER (WHERE statut = 'actif') as actifs,
-        COUNT(*) FILTER (WHERE statut = 'inactif') as inactifs,
-        COUNT(*) FILTER (WHERE statut = 'suspendu') as suspendus,
-        COALESCE(SUM(tarif), 0) as total_montant,
-        COUNT(*) FILTER (WHERE moyen_paiement = 'helloasso') as helloasso_count,
-        COUNT(*) FILTER (WHERE moyen_paiement = 'cb') as cb_count,
-        COUNT(*) FILTER (WHERE moyen_paiement = 'especes') as especes_count,
-        COUNT(*) FILTER (WHERE moyen_paiement = 'virement') as virement_count,
-        COUNT(*) FILTER (WHERE moyen_paiement = 'cheque') as cheque_count,
-        COUNT(*) FILTER (WHERE photo_url IS NOT NULL AND photo_url != '') as avec_photo,
+        COUNT(*) FILTER (WHERE a.statut = 'actif') as actifs,
+        COUNT(*) FILTER (WHERE a.statut = 'inactif') as inactifs,
+        COUNT(*) FILTER (WHERE a.statut = 'suspendu') as suspendus,
+        COUNT(*) FILTER (WHERE a.statut = 'banni') as bannis,
+        COALESCE(SUM(a.tarif), 0) as total_montant,
+        COUNT(*) FILTER (WHERE a.moyen_paiement = 'helloasso') as helloasso_count,
+        COUNT(*) FILTER (WHERE a.moyen_paiement = 'cb') as cb_count,
+        COUNT(*) FILTER (WHERE a.moyen_paiement = 'especes') as especes_count,
+        COUNT(*) FILTER (WHERE a.moyen_paiement = 'virement') as virement_count,
+        COUNT(*) FILTER (WHERE a.moyen_paiement = 'cheque') as cheque_count,
+        COUNT(*) FILTER (WHERE a.photo_url IS NOT NULL AND a.photo_url != '' AND a.photo_url != 'null' AND TRIM(a.photo_url) != '') as avec_photo,
         COUNT(*) FILTER (WHERE EXISTS (
-          SELECT 1 FROM cartes c WHERE c.adhesion_id = adhesions.id AND c.statut != 'remise'
+          SELECT 1 FROM cartes c WHERE c.adhesion_id = a.id
         )) as avec_carte
-       FROM adhesions
-       WHERE EXTRACT(YEAR FROM date_adhesion) = $1`,
+       FROM adhesions a
+       WHERE a.date_adhesion IS NOT NULL AND EXTRACT(YEAR FROM a.date_adhesion)::text = $1`,
       [year]
     );
     

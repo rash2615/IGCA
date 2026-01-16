@@ -75,53 +75,83 @@
         <p>Chargement du menu...</p>
       </div>
 
-      <div v-else-if="menuPlats.length > 0" class="menu-content">
-        <div class="menu-header-info">
-          <div>
-            <h2>Menu du {{ formatDateShort(selectedDate) }}</h2>
-            <p class="menu-stats">
-              {{ menuPlats.length }} plat{{ menuPlats.length > 1 ? 's' : '' }} 
-              • {{ menuPlats.filter(p => p.disponible).length }} disponible{{ menuPlats.filter(p => p.disponible).length > 1 ? 's' : '' }}
-            </p>
-          </div>
-          <button v-if="canEdit" @click="saveMenu" :disabled="savingMenu" class="btn-save">
-            <span class="material-symbols-outlined">save</span>
-            {{ savingMenu ? 'Enregistrement...' : 'Enregistrer' }}
-          </button>
-        </div>
-
-        <div class="menu-grid">
-          <div
-            v-for="plat in menuPlats"
-            :key="plat.id"
-            class="menu-item-card"
-            :class="{ unavailable: !plat.disponible }"
-          >
-            <div class="item-image">
-              <img
-                v-if="plat.image_url"
-                :src="getImageUrl(plat.image_url)"
-                :alt="plat.nom"
-                @error="handleImageError"
-              />
-              <div v-else class="image-placeholder">
-                <span class="material-symbols-outlined">restaurant</span>
+      <div v-else-if="menuPlats.length > 0" class="menu-book-container">
+        <div class="menu-book">
+          <!-- Page de gauche -->
+          <div class="book-page left-page">
+            <div class="page-header">
+              <div class="restaurant-logo">
+                <img src="/Miniature-site-1.svg" alt="IGCA Paris" class="logo-small" />
               </div>
-              <div :class="['status-badge', plat.disponible ? 'available' : 'unavailable']">
-                <span class="material-symbols-outlined">
-                  {{ plat.disponible ? 'check_circle' : 'block' }}
-                </span>
+              <h2 class="restaurant-name">IGCA Paris</h2>
+              <p class="menu-date">{{ formatDateShort(selectedDate) }}</p>
+              <div class="decorative-line"></div>
+            </div>
+            <div class="page-content">
+              <div
+                v-for="plat in leftPagePlats"
+                :key="plat.id"
+                class="menu-item"
+                :class="{ unavailable: !plat.disponible }"
+              >
+                <div class="menu-item-header">
+                  <h3 class="dish-name">{{ plat.nom }}</h3>
+                  <span class="dish-price">{{ formatPrice(plat.prix) }} €</span>
+                </div>
+                <p v-if="plat.description" class="dish-description">{{ plat.description }}</p>
+                <div v-if="!plat.disponible" class="dish-unavailable">
+                  <span class="material-symbols-outlined">block</span>
+                  Épuisé
+                </div>
+                <div v-if="canEdit" class="dish-actions">
+                  <button @click="removeFromMenu(plat)" class="btn-remove-small" title="Retirer">
+                    <span class="material-symbols-outlined">close</span>
+                  </button>
+                </div>
               </div>
             </div>
-            <div class="item-content">
-              <h3>{{ plat.nom }}</h3>
-              <p v-if="plat.description" class="item-desc">{{ plat.description }}</p>
-              <div class="item-footer">
-                <span class="price">{{ formatPrice(plat.prix) }} €</span>
-                <button v-if="canEdit" @click="removeFromMenu(plat)" class="btn-remove" title="Retirer">
-                  <span class="material-symbols-outlined">close</span>
-                </button>
+          </div>
+
+          <!-- Reliure du livre -->
+          <div class="book-spine"></div>
+
+          <!-- Page de droite -->
+          <div class="book-page right-page">
+            <div class="page-header">
+              <div class="decorative-line"></div>
+              <p class="menu-subtitle">Menu du jour</p>
+            </div>
+            <div class="page-content">
+              <div
+                v-for="plat in rightPagePlats"
+                :key="plat.id"
+                class="menu-item"
+                :class="{ unavailable: !plat.disponible }"
+              >
+                <div class="menu-item-header">
+                  <h3 class="dish-name">{{ plat.nom }}</h3>
+                  <span class="dish-price">{{ formatPrice(plat.prix) }} €</span>
+                </div>
+                <p v-if="plat.description" class="dish-description">{{ plat.description }}</p>
+                <div v-if="!plat.disponible" class="dish-unavailable">
+                  <span class="material-symbols-outlined">block</span>
+                  Épuisé
+                </div>
+                <div v-if="canEdit" class="dish-actions">
+                  <button @click="removeFromMenu(plat)" class="btn-remove-small" title="Retirer">
+                    <span class="material-symbols-outlined">close</span>
+                  </button>
+                </div>
               </div>
+            </div>
+            <div class="page-footer">
+              <div class="menu-stats-footer">
+                <p>{{ menuPlats.length }} plat{{ menuPlats.length > 1 ? 's' : '' }} disponible{{ menuPlats.filter(p => p.disponible).length > 1 ? 's' : '' }}</p>
+              </div>
+              <button v-if="canEdit" @click="saveMenu" :disabled="savingMenu" class="btn-save-book">
+                <span class="material-symbols-outlined">save</span>
+                {{ savingMenu ? 'Enregistrement...' : 'Enregistrer' }}
+              </button>
             </div>
           </div>
         </div>
@@ -477,6 +507,23 @@ const filteredPlats = computed(() => {
   return filtered;
 });
 
+// Split plats for book pages
+const leftPagePlats = computed(() => {
+  const available = menuPlats.value.filter(p => p.disponible);
+  const unavailable = menuPlats.value.filter(p => !p.disponible);
+  const all = [...available, ...unavailable];
+  const mid = Math.ceil(all.length / 2);
+  return all.slice(0, mid);
+});
+
+const rightPagePlats = computed(() => {
+  const available = menuPlats.value.filter(p => p.disponible);
+  const unavailable = menuPlats.value.filter(p => !p.disponible);
+  const all = [...available, ...unavailable];
+  const mid = Math.ceil(all.length / 2);
+  return all.slice(mid);
+});
+
 // Utils
 function formatPrice(price: number) {
   return new Intl.NumberFormat('fr-FR', {
@@ -742,8 +789,8 @@ function togglePlatForMenu(platId: number) {
 
 function addSelectedPlatsToMenu() {
   const platsToAdd = availablePlats.value
-    .filter(p => selectedPlatsForMenu.value.includes(p.id))
-    .map(p => ({ ...p }));
+    .filter((p: any) => selectedPlatsForMenu.value.includes(p.id))
+    .map((p: any) => ({ ...p }));
 
   if (!currentMenu.value) {
     currentMenu.value = { date_menu: selectedDate.value, plats: [] };
@@ -753,11 +800,11 @@ function addSelectedPlatsToMenu() {
   }
 
   const existingIds = new Set([
-    ...currentMenu.value.plats.map(p => p.id),
-    ...menuPlats.value.map(p => p.id),
+    ...currentMenu.value.plats.map((p: any) => p.id),
+    ...menuPlats.value.map((p: any) => p.id),
   ]);
 
-  const newPlats = platsToAdd.filter(p => !existingIds.has(p.id));
+  const newPlats = platsToAdd.filter((p: any) => !existingIds.has(p.id));
 
   if (newPlats.length === 0) {
     alert('Tous les plats sélectionnés sont déjà dans le menu');
@@ -771,11 +818,11 @@ function addSelectedPlatsToMenu() {
 }
 
 function removeFromMenu(plat: any) {
-  const index = menuPlats.value.findIndex(p => p.id === plat.id);
+  const index = menuPlats.value.findIndex((p: any) => p.id === plat.id);
   if (index > -1) {
     menuPlats.value.splice(index, 1);
     if (currentMenu.value?.plats) {
-      const menuIndex = currentMenu.value.plats.findIndex(p => p.id === plat.id);
+      const menuIndex = currentMenu.value.plats.findIndex((p: any) => p.id === plat.id);
       if (menuIndex > -1) {
         currentMenu.value.plats.splice(menuIndex, 1);
       }
@@ -1022,7 +1069,260 @@ onMounted(async () => {
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
-/* Menu content */
+/* Menu Book */
+.menu-book-container {
+  display: flex;
+  justify-content: center;
+  padding: 40px 20px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e2e8f0 100%);
+  min-height: 600px;
+}
+
+.menu-book {
+  display: flex;
+  max-width: 1200px;
+  width: 100%;
+  perspective: 2000px;
+  gap: 0;
+}
+
+.book-page {
+  flex: 1;
+  background: #fffef7;
+  padding: 40px 50px;
+  box-shadow: 
+    0 10px 40px rgba(0, 0, 0, 0.15),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+  position: relative;
+  min-height: 700px;
+  display: flex;
+  flex-direction: column;
+}
+
+.left-page {
+  border-radius: 8px 0 0 8px;
+  border-right: 2px solid #e5e7eb;
+}
+
+.right-page {
+  border-radius: 0 8px 8px 0;
+  border-left: 2px solid #e5e7eb;
+}
+
+.book-spine {
+  width: 20px;
+  background: linear-gradient(180deg, #8b5cf6 0%, #6366f1 50%, #8b5cf6 100%);
+  box-shadow: 
+    inset -5px 0 10px rgba(0, 0, 0, 0.2),
+    inset 5px 0 10px rgba(0, 0, 0, 0.2);
+  position: relative;
+  z-index: 1;
+}
+
+.book-spine::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 4px;
+  height: 60%;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+}
+
+.page-header {
+  text-align: center;
+  margin-bottom: 40px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.restaurant-logo {
+  margin-bottom: 16px;
+}
+
+.logo-small {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+}
+
+.restaurant-name {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 8px 0;
+  letter-spacing: 1px;
+}
+
+.menu-date {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0 0 16px 0;
+  font-style: italic;
+}
+
+.menu-subtitle {
+  font-size: 18px;
+  color: #64748b;
+  margin: 0;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.decorative-line {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #dc2626, transparent);
+  margin: 16px 0;
+}
+
+.page-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.menu-item {
+  padding: 20px 0;
+  border-bottom: 1px dashed #e5e7eb;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.menu-item:last-child {
+  border-bottom: none;
+}
+
+.menu-item.unavailable {
+  opacity: 0.6;
+}
+
+.menu-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+  gap: 16px;
+}
+
+.dish-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+  flex: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.dish-price {
+  font-size: 20px;
+  font-weight: 700;
+  color: #dc2626;
+  white-space: nowrap;
+}
+
+.dish-description {
+  font-size: 14px;
+  color: #64748b;
+  line-height: 1.6;
+  margin: 8px 0 0 0;
+  font-style: italic;
+}
+
+.dish-unavailable {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 4px 12px;
+  background: #fee2e2;
+  color: #dc2626;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dish-unavailable .material-symbols-outlined {
+  font-size: 16px;
+}
+
+.dish-actions {
+  position: absolute;
+  top: 20px;
+  right: 0;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.menu-item:hover .dish-actions {
+  opacity: 1;
+}
+
+.btn-remove-small {
+  width: 28px;
+  height: 28px;
+  background: #fee2e2;
+  border: none;
+  border-radius: 6px;
+  color: #dc2626;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.btn-remove-small:hover {
+  background: #fecaca;
+  transform: scale(1.1);
+}
+
+.page-footer {
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 2px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.menu-stats-footer {
+  font-size: 12px;
+  color: #64748b;
+  font-style: italic;
+}
+
+.btn-save-book {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-save-book:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.btn-save-book:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Menu content (old - keep for compatibility) */
 .menu-content {
   background: white;
   border-radius: 16px;
@@ -1863,6 +2163,40 @@ onMounted(async () => {
 }
 
 /* Responsive */
+@media (max-width: 1024px) {
+  .menu-book {
+    flex-direction: column;
+    max-width: 600px;
+  }
+
+  .book-page {
+    border-radius: 8px;
+    margin-bottom: 20px;
+    min-height: auto;
+  }
+
+  .left-page {
+    border-right: none;
+    border-bottom: 2px solid #e5e7eb;
+  }
+
+  .right-page {
+    border-left: none;
+    border-top: 2px solid #e5e7eb;
+  }
+
+  .book-spine {
+    width: 100%;
+    height: 20px;
+    background: linear-gradient(90deg, #8b5cf6 0%, #6366f1 50%, #8b5cf6 100%);
+  }
+
+  .book-spine::before {
+    width: 60%;
+    height: 4px;
+  }
+}
+
 @media (max-width: 768px) {
   .menu-view {
     padding: 16px;
@@ -1876,6 +2210,26 @@ onMounted(async () => {
   .date-selector-card {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .menu-book-container {
+    padding: 20px 10px;
+  }
+
+  .book-page {
+    padding: 24px 20px;
+  }
+
+  .restaurant-name {
+    font-size: 22px;
+  }
+
+  .dish-name {
+    font-size: 18px;
+  }
+
+  .dish-price {
+    font-size: 18px;
   }
 
   .menu-grid,

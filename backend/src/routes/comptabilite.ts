@@ -1365,6 +1365,93 @@ router.delete('/bilans/:id', async (req, res) => {
   }
 });
 
+// Évolution du chiffre d'affaires par année
+router.get('/evolution-ca-annee', async (req, res) => {
+  try {
+    // Récupérer le chiffre d'affaires (adhésions + dons + crédits) par année
+    const result = await pool.query(`
+      SELECT 
+        EXTRACT(YEAR FROM date_adhesion) as annee,
+        COALESCE(SUM(tarif), 0) as montant_adhesions
+      FROM adhesions
+      WHERE date_adhesion IS NOT NULL
+      GROUP BY EXTRACT(YEAR FROM date_adhesion)
+      ORDER BY annee ASC
+    `);
+
+    const donsResult = await pool.query(`
+      SELECT 
+        EXTRACT(YEAR FROM date_don) as annee,
+        COALESCE(SUM(montant), 0) as montant_dons
+      FROM dons
+      WHERE date_don IS NOT NULL
+      GROUP BY EXTRACT(YEAR FROM date_don)
+      ORDER BY annee ASC
+    `);
+
+    const creditsResult = await pool.query(`
+      SELECT 
+        EXTRACT(YEAR FROM date_credit) as annee,
+        COALESCE(SUM(montant), 0) as montant_credits
+      FROM credits
+      WHERE date_credit IS NOT NULL
+      GROUP BY EXTRACT(YEAR FROM date_credit)
+      ORDER BY annee ASC
+    `);
+
+    // Combiner les données par année
+    const caParAnnee: Record<number, { adhesions: number; dons: number; credits: number; total: number }> = {};
+
+    // Adhésions
+    result.rows.forEach((row: any) => {
+      const annee = parseInt(row.annee);
+      if (!caParAnnee[annee]) {
+        caParAnnee[annee] = { adhesions: 0, dons: 0, credits: 0, total: 0 };
+      }
+      caParAnnee[annee].adhesions = parseFloat(row.montant_adhesions) || 0;
+    });
+
+    // Dons
+    donsResult.rows.forEach((row: any) => {
+      const annee = parseInt(row.annee);
+      if (!caParAnnee[annee]) {
+        caParAnnee[annee] = { adhesions: 0, dons: 0, credits: 0, total: 0 };
+      }
+      caParAnnee[annee].dons = parseFloat(row.montant_dons) || 0;
+    });
+
+    // Crédits
+    creditsResult.rows.forEach((row: any) => {
+      const annee = parseInt(row.annee);
+      if (!caParAnnee[annee]) {
+        caParAnnee[annee] = { adhesions: 0, dons: 0, credits: 0, total: 0 };
+      }
+      caParAnnee[annee].credits = parseFloat(row.montant_credits) || 0;
+    });
+
+    // Calculer le total par année et formater les données
+    const evolution = Object.keys(caParAnnee)
+      .map(annee => parseInt(annee))
+      .sort((a, b) => a - b)
+      .map(annee => {
+        const data = caParAnnee[annee];
+        data.total = data.adhesions + data.dons + data.credits;
+        return {
+          annee,
+          ...data,
+        };
+      });
+
+    res.json({
+      success: true,
+      data: evolution,
+    });
+  } catch (error: any) {
+    logger.error('Erreur lors de la récupération de l\'évolution du CA:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // Vue d'ensemble complète (revenus + dépenses)
 router.get('/overview-complete', async (req, res) => {
   try {

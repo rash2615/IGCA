@@ -1,24 +1,53 @@
 <template>
-  <div class="adhesions-modern">
+  <div class="page-container">
     <!-- Header avec actions principales -->
     <div class="page-header">
-      <div class="header-content">
-        <h1>Adhésions</h1>
-        <div class="header-actions">
-          <button @click="showSyncModal = true" class="btn-icon" title="Synchroniser HelloAsso">
-            <span class="material-symbols-outlined">sync</span>
-          </button>
-          <button @click="showImportModal = true" class="btn-icon" title="Importer CSV">
-            <span class="material-symbols-outlined">upload</span>
-          </button>
-          <button @click="exportCsv" class="btn-icon" title="Exporter CSV">
-            <span class="material-symbols-outlined">download</span>
-          </button>
-          <button @click="openCreateModal" class="btn-primary">
-            <span class="material-symbols-outlined">add</span>
-            Nouvelle adhésion
-          </button>
-        </div>
+      <h1>Adhésions</h1>
+      <div class="header-actions">
+        <button 
+          @click="refreshAdhesions" 
+          class="action-btn-icon" 
+          title="Actualiser"
+          :disabled="loading"
+        >
+          <span class="material-symbols-outlined" :class="{ 'spinning': loading }">refresh</span>
+        </button>
+        <button 
+          @click="showSyncModal = true" 
+          class="action-btn-icon" 
+          title="Synchroniser HelloAsso"
+          :disabled="syncing"
+        >
+          <span class="material-symbols-outlined" :class="{ 'spinning': syncing }">sync</span>
+        </button>
+        <button 
+          @click="showImportModal = true" 
+          class="action-btn-icon" 
+          title="Importer CSV"
+          :disabled="importing"
+        >
+          <span class="material-symbols-outlined">upload</span>
+        </button>
+        <button 
+          @click="exportCsv" 
+          class="action-btn-icon" 
+          title="Exporter CSV"
+          :disabled="loading"
+        >
+          <span class="material-symbols-outlined">download</span>
+        </button>
+        <button 
+          @click="openCreateModal" 
+          class="action-btn-primary"
+          title="Ajouter une nouvelle adhésion"
+        >
+          <span class="material-symbols-outlined">add</span>
+          <span class="btn-text">
+            <span class="btn-text-line">Ajouter</span>
+            <span class="btn-text-line">une</span>
+            <span class="btn-text-line">adhésion</span>
+          </span>
+        </button>
       </div>
     </div>
 
@@ -121,25 +150,31 @@
       </div>
     </div>
 
-    <!-- Statistiques rapides -->
-    <div class="stats-bar">
-      <div class="stat-item">
-        <span class="stat-value">{{ totalAdhesions }}</span>
-        <span class="stat-label">Total</span>
+
+    <!-- Summary Bar -->
+    <div class="summary-bar">
+      <div class="summary-text">
+        {{ filteredAdhesions.length }} adhésion{{ filteredAdhesions.length > 1 ? 's' : '' }}
+        <span v-if="totalAdhesions > adhesions.length && !showAll" class="total-info">
+          ({{ adhesions.length }} affichée{{ adhesions.length > 1 ? 's' : '' }} sur {{ totalAdhesions }})
+        </span>
+        - {{ formatAmount(totalAmount) }} €
       </div>
-      <div class="stat-item">
-        <span class="stat-value">{{ adhesionsByYear.length }}</span>
-        <span class="stat-label">Années</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-value">{{ selectedAdhesions.length }}</span>
-        <span class="stat-label">Sélectionné(s)</span>
-      </div>
-      <div v-if="selectedAdhesions.length > 0" class="bulk-actions">
-        <button @click="showBulkStatusModal = true" class="btn-secondary btn-sm">
-          <span class="material-symbols-outlined">edit</span>
-          Modifier le statut
-        </button>
+      <div class="summary-actions">
+        <label class="toggle-all">
+          <input 
+            type="checkbox" 
+            v-model="showAll"
+            @change="handleShowAllChange"
+          />
+          <span>Afficher toutes les adhésions</span>
+        </label>
+        <div v-if="selectedAdhesions.length > 0" class="bulk-actions">
+          <button @click="showBulkStatusModal = true" class="btn-action btn-action-secondary">
+            <span class="material-symbols-outlined">edit</span>
+            Actions
+          </button>
+        </div>
       </div>
     </div>
 
@@ -149,144 +184,250 @@
       <p>Chargement des adhésions...</p>
     </div>
 
-    <!-- Vue groupée par année -->
-    <div v-else-if="adhesionsByYear.length > 0" class="adhesions-container">
-      <div v-for="group in adhesionsByYear" :key="group.year" class="year-group">
-        <div class="year-header">
-          <h2 class="year-title">
-            <span class="material-symbols-outlined">calendar_today</span>
-            {{ group.year }}
-          </h2>
-          <span class="year-count">{{ group.adhesions.length }} adhésion(s)</span>
-        </div>
-        <div class="cards-grid">
-          <div
-            v-for="adhesion in group.adhesions"
+    <!-- Vue Tableau - Toutes les adhésions -->
+    <div v-else-if="filteredAdhesions.length > 0" class="table-container">
+      <table class="table-modern">
+        <thead>
+          <tr>
+            <th>
+              <input
+                type="checkbox"
+                @change="toggleSelectAll"
+                :checked="selectedAdhesions.length === filteredAdhesions.length && filteredAdhesions.length > 0"
+              />
+            </th>
+            <th>
+              <div class="sortable-header" @click="toggleSort('photo_url')">
+                État
+                <span class="sort-icon">
+                  <span class="material-symbols-outlined" :class="{ 'active': sortBy === 'photo_url' }">
+                    {{ sortBy === 'photo_url' ? (sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'swap_vert' }}
+                  </span>
+                </span>
+              </div>
+            </th>
+            <th>Photo</th>
+            <th>
+              <div class="sortable-header" @click="toggleSort('helloasso_id')">
+                Référence
+                <span class="sort-icon">
+                  <span class="material-symbols-outlined" :class="{ 'active': sortBy === 'helloasso_id' }">
+                    {{ sortBy === 'helloasso_id' ? (sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'swap_vert' }}
+                  </span>
+                </span>
+              </div>
+            </th>
+            <th>
+              <div class="sortable-header" @click="toggleSort('nom')">
+                Nom
+                <span class="sort-icon">
+                  <span class="material-symbols-outlined" :class="{ 'active': sortBy === 'nom' }">
+                    {{ sortBy === 'nom' ? (sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'swap_vert' }}
+                  </span>
+                </span>
+              </div>
+            </th>
+            <th>
+              <div class="sortable-header" @click="toggleSort('prenom')">
+                Prénom
+                <span class="sort-icon">
+                  <span class="material-symbols-outlined" :class="{ 'active': sortBy === 'prenom' }">
+                    {{ sortBy === 'prenom' ? (sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'swap_vert' }}
+                  </span>
+                </span>
+              </div>
+            </th>
+            <th>
+              <div class="sortable-header" @click="toggleSort('email')">
+                Email
+                <span class="sort-icon">
+                  <span class="material-symbols-outlined" :class="{ 'active': sortBy === 'email' }">
+                    {{ sortBy === 'email' ? (sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'swap_vert' }}
+                  </span>
+                </span>
+              </div>
+            </th>
+            <th>
+              <div class="sortable-header" @click="toggleSort('date_adhesion')">
+                Date d'adhésion
+                <span class="sort-icon">
+                  <span class="material-symbols-outlined" :class="{ 'active': sortBy === 'date_adhesion' }">
+                    {{ sortBy === 'date_adhesion' ? (sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'swap_vert' }}
+                  </span>
+                </span>
+              </div>
+            </th>
+            <th>
+              <div class="sortable-header" @click="toggleSort('tarif')">
+                Montant
+                <span class="sort-icon">
+                  <span class="material-symbols-outlined" :class="{ 'active': sortBy === 'tarif' }">
+                    {{ sortBy === 'tarif' ? (sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'swap_vert' }}
+                  </span>
+                </span>
+              </div>
+            </th>
+            <th>
+              <div class="sortable-header" @click="toggleSort('moyen_paiement')">
+                Type de paiement
+                <span class="sort-icon">
+                  <span class="material-symbols-outlined" :class="{ 'active': sortBy === 'moyen_paiement' }">
+                    {{ sortBy === 'moyen_paiement' ? (sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'swap_vert' }}
+                  </span>
+                </span>
+              </div>
+            </th>
+            <th>
+              <div class="sortable-header" @click="toggleSort('source')">
+                Statut
+                <span class="sort-icon">
+                  <span class="material-symbols-outlined" :class="{ 'active': sortBy === 'source' }">
+                    {{ sortBy === 'source' ? (sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'swap_vert' }}
+                  </span>
+                </span>
+              </div>
+            </th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="adhesion in filteredAdhesions"
             :key="adhesion.id"
-            class="adhesion-card"
             :class="{ selected: selectedAdhesions.includes(adhesion.id) }"
           >
-            <div class="card-checkbox">
+            <td>
               <input
                 type="checkbox"
                 :value="adhesion.id"
                 v-model="selectedAdhesions"
               />
-            </div>
-            <div class="card-header">
-              <div class="card-photo">
-                <img
-                  v-if="adhesion.photo_url"
-                  :src="getImageUrl(adhesion.photo_url)"
-                  :alt="`${adhesion.nom} ${adhesion.prenom}`"
+            </td>
+            <td>
+              <div class="etat-cell">
+                <!-- Icône du statut -->
+                <div class="statut-indicator" :class="`statut-${adhesion.statut || 'actif'}`" :title="formatStatut(adhesion.statut || 'actif')">
+                  <span class="material-symbols-outlined">
+                    {{ getStatutIcon(adhesion.statut || 'actif') }}
+                  </span>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="photo-thumbnail">
+                <img 
+                  v-if="hasValidPhoto(adhesion.photo_url)" 
+                  :src="getImageUrl(adhesion.photo_url)" 
+                  :alt="`${adhesion.prenom} ${adhesion.nom}`"
                   @error="handleImageError"
+                  @load="() => console.log('✅ Photo chargée pour:', adhesion.nom, adhesion.prenom, adhesion.photo_url)"
+                  loading="lazy"
                 />
                 <div v-else class="photo-placeholder">
                   <span class="material-symbols-outlined">person</span>
                 </div>
               </div>
-              <div class="card-info">
-                <h3 class="card-name">
-                  {{ adhesion.prenom }} {{ adhesion.nom }}
-                  <span 
-                    v-if="adhesion.carte_delivree" 
-                    class="carte-delivree-badge" 
-                    title="Carte délivrée"
-                  >
-                    <span class="material-symbols-outlined">check_circle</span>
+            </td>
+            <td>{{ adhesion.helloasso_id || adhesion.id }}</td>
+            <td>{{ adhesion.nom || '-' }}</td>
+            <td>{{ adhesion.prenom || '-' }}</td>
+            <td>{{ adhesion.email || '-' }}</td>
+            <td>{{ formatDate(adhesion.date_adhesion) }}</td>
+            <td>{{ formatAmount(parseFloat(adhesion.tarif) || 0) }} €</td>
+            <td>
+              <span class="payment-type-badge" :class="`payment-${adhesion.moyen_paiement || 'default'}`">
+                {{ formatPaymentType(adhesion.moyen_paiement) }}
+              </span>
+            </td>
+            <td>
+              <span class="source-badge" :class="`source-${adhesion.source || 'online'}`">
+                {{ formatSource(adhesion.source) }}
+              </span>
+            </td>
+            <td>
+              <div class="actions-dropdown" @click.stop>
+                <!-- Icône du statut actuel -->
+                <div class="action-statut-indicator" :class="`statut-${adhesion.statut || 'actif'}`" :title="formatStatut(adhesion.statut || 'actif')">
+                  <span class="material-symbols-outlined">
+                    {{ getStatutIcon(adhesion.statut || 'actif') }}
                   </span>
-                </h3>
-                <p class="card-email">{{ adhesion.email }}</p>
-              </div>
-            </div>
-            <div class="card-body">
-              <div class="card-details">
-                <div class="detail-item">
-                  <span class="material-symbols-outlined">calendar_today</span>
-                  <span>{{ formatDate(adhesion.date_adhesion) }}</span>
                 </div>
-                <div class="detail-item">
-                  <span class="material-symbols-outlined">payments</span>
-                  <span>{{ adhesion.tarif }} €</span>
+                <button 
+                  class="actions-btn"
+                  @click.stop="toggleActionsMenu(adhesion.id)"
+                  type="button"
+                >
+                  <span class="material-symbols-outlined">more_vert</span>
+                </button>
+                <div 
+                  v-if="openActionsMenu === adhesion.id"
+                  class="actions-menu show"
+                  @click.stop
+                >
+                  <a @click.stop="handleAction(adhesion, 'incomplet')" href="javascript:void(0)">
+                    <span class="material-symbols-outlined">remove_circle</span> Incomplet
+                  </a>
+                  <a @click.stop="handleAction(adhesion, 'a_generer')" href="javascript:void(0)">
+                    <span class="material-symbols-outlined">workspace_premium</span> À générer
+                  </a>
+                  <a @click.stop="handleAction(adhesion, 'delivree')" href="javascript:void(0)">
+                    <span class="material-symbols-outlined">task_alt</span> Délivrée
+                  </a>
+                  <a @click.stop="handleAction(adhesion, 'suspendu')" href="javascript:void(0)">
+                    <span class="material-symbols-outlined">hourglass_empty</span> En suspens
+                  </a>
+                  <a @click.stop="handleAction(adhesion, 'inactif')" href="javascript:void(0)">
+                    <span class="material-symbols-outlined">do_not_disturb</span> Inactive
+                  </a>
+                  <a @click.stop="handleAction(adhesion, 'modifier')" href="javascript:void(0)">
+                    <span class="material-symbols-outlined">edit</span> Modifier
+                  </a>
+                  <a @click.stop="handleAction(adhesion, 'voir')" href="javascript:void(0)">
+                    <span class="material-symbols-outlined">visibility</span> Voir
+                  </a>
+                  <a @click.stop="handleAction(adhesion, 'supprimer')" class="danger" href="javascript:void(0)">
+                    <span class="material-symbols-outlined">delete</span> Supprimer
+                  </a>
                 </div>
-                <div class="detail-item">
-                  <span class="material-symbols-outlined">{{ getPaymentIcon(adhesion.moyen_paiement) }}</span>
-                  <span>{{ formatPaymentMethod(adhesion.moyen_paiement) }}</span>
-                </div>
               </div>
-              <div class="card-badges">
-                <span :class="['badge', `badge-${adhesion.statut}`]">
-                  <span class="material-symbols-outlined">{{ getStatutIcon(adhesion.statut) }}</span>
-                  {{ formatStatut(adhesion.statut) }}
-                </span>
-                <span v-if="adhesion.source === 'offline'" class="badge badge-offline">
-                  <span class="material-symbols-outlined">store</span>
-                  Hors ligne
-                </span>
-                <span v-else-if="adhesion.source === 'online'" class="badge badge-online">
-                  <span class="material-symbols-outlined">language</span>
-                  En ligne
-                </span>
-                <span v-if="adhesion.helloasso_id" class="badge badge-helloasso">
-                  <span class="material-symbols-outlined">link</span>
-                  HelloAsso
-                </span>
-                <span v-if="adhesion.carte_id" class="badge badge-carte">
-                  <span class="material-symbols-outlined">badge</span>
-                  Carte
-                </span>
-              </div>
-            </div>
-            <div class="card-footer">
-              <div class="card-actions">
-                <button
-                  @click="viewDetails(adhesion.id)"
-                  class="btn-action"
-                  title="Voir les détails"
-                >
-                  <span class="material-symbols-outlined">visibility</span>
-                </button>
-                <button
-                  @click="editAdhesion(adhesion)"
-                  class="btn-action"
-                  title="Modifier"
-                >
-                  <span class="material-symbols-outlined">edit</span>
-                </button>
-                <button
-                  v-if="!adhesion.carte_id && isAdhesionComplete(adhesion)"
-                  @click="generateCarteForAdhesion(adhesion)"
-                  class="btn-action btn-generate"
-                  :disabled="generatingCarte === adhesion.id"
-                  title="Générer la carte"
-                >
-                  <span v-if="generatingCarte === adhesion.id" class="material-symbols-outlined">hourglass_empty</span>
-                  <span v-else class="material-symbols-outlined">badge</span>
-                </button>
-                <button
-                  @click="confirmDelete(adhesion)"
-                  class="btn-action btn-danger"
-                  title="Supprimer"
-                >
-                  <span class="material-symbols-outlined">delete</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- État vide -->
+    <!-- Message vide -->
     <div v-else class="empty-state">
       <span class="material-symbols-outlined empty-icon">inbox</span>
       <h3>Aucune adhésion trouvée</h3>
-      <p v-if="hasActiveFilters">Essayez de modifier vos filtres de recherche</p>
-      <p v-else>Commencez par créer une nouvelle adhésion</p>
+      <div style="margin-top: 16px; padding: 16px; background: #f9fafb; border-radius: 8px; font-size: 13px; color: #6b7280; text-align: left; max-width: 500px;">
+        <p><strong>Informations de débogage:</strong></p>
+        <ul style="margin: 8px 0; padding-left: 20px;">
+          <li>Adhésions chargées depuis l'API: <strong>{{ adhesions.length }}</strong></li>
+          <li>Adhésions après filtrage: <strong>{{ filteredAdhesions.length }}</strong></li>
+          <li>Total adhésions (API): <strong>{{ totalAdhesions }}</strong></li>
+          <li>Filtres actifs: <strong>{{ hasActiveFilters || filters.search ? 'Oui' : 'Non' }}</strong></li>
+        </ul>
+      </div>
+      <div style="margin-top: 16px;">
+        <p v-if="hasActiveFilters || filters.search" style="color: #dc2626; font-weight: 500;">
+          ⚠️ Les filtres masquent toutes les adhésions. Réinitialisez les filtres.
+        </p>
+        <p v-else-if="adhesions.length > 0 && filteredAdhesions.length === 0" style="color: #dc2626; font-weight: 500;">
+          ⚠️ Problème de filtrage : {{ adhesions.length }} adhésion(s) chargée(s) mais aucune ne passe les filtres.
+        </p>
+        <p v-else-if="totalAdhesions === 0" style="color: #6b7280;">
+          Aucune adhésion dans la base de données. Importez un fichier CSV ou ajoutez une adhésion manuellement.
+        </p>
+        <p v-else style="color: #6b7280;">
+          Vérifiez la console du navigateur (F12) pour plus de détails.
+        </p>
+      </div>
     </div>
 
     <!-- Pagination -->
-    <div v-if="!loading && totalPages > 1" class="pagination">
+    <div v-if="!loading && totalPages > 1 && !showAll" class="pagination">
       <button
         @click="loadAdhesions(currentPage - 1)"
         :disabled="currentPage === 1"
@@ -360,8 +501,13 @@
             <div class="form-group full-width">
               <label>Photo de profil</label>
               <div class="photo-upload-section">
-                <div class="photo-preview" v-if="formData.photo_url || photoPreview">
-                  <img :src="photoPreview || formData.photo_url" alt="Photo de profil" class="preview-image" />
+                <div class="photo-preview" v-if="photoPreview || (formData.photo_url && !selectedPhotoFile)">
+                  <img 
+                    :src="photoPreview || getImageUrl(formData.photo_url)" 
+                    alt="Photo de profil" 
+                    class="preview-image"
+                    @error="handlePreviewImageError"
+                  />
                   <button type="button" @click="clearPhoto" class="btn-remove-photo">
                     <span class="material-symbols-outlined">close</span>
                   </button>
@@ -436,15 +582,46 @@
     </div>
 
     <!-- Modal import -->
-    <div v-if="showImportModal" class="modal" @click.self="showImportModal = false">
+    <div v-if="showImportModal" class="modal" @click.self="closeImportModal">
       <div class="modal-content">
-        <h2>Importer un fichier CSV</h2>
-        <input type="file" @change="handleFileSelect" accept=".csv" />
+        <h2>
+          <span class="material-symbols-outlined" style="vertical-align: middle; margin-right: 8px;">upload</span>
+          Importer un fichier CSV
+        </h2>
+        <p class="modal-description">
+          Sélectionnez un fichier CSV contenant les données d'adhésions à importer.
+        </p>
+        <div class="form-group full-width">
+          <label>Fichier CSV *</label>
+          <input 
+            type="file" 
+            @change="handleFileSelect" 
+            accept=".csv" 
+            :disabled="importing"
+            class="file-input-large"
+          />
+          <p v-if="selectedFile" class="file-info">
+            <span class="material-symbols-outlined">description</span>
+            {{ selectedFile.name }} ({{ formatFileSize(selectedFile.size) }})
+          </p>
+        </div>
         <div class="modal-actions">
-          <button @click="importCsv" :disabled="!selectedFile || importing" class="btn-primary">
-            {{ importing ? 'Import...' : 'Importer' }}
+          <button 
+            @click="importCsv" 
+            :disabled="!selectedFile || importing" 
+            class="btn-primary"
+          >
+            <span v-if="importing" class="material-symbols-outlined spinning">hourglass_empty</span>
+            <span v-else class="material-symbols-outlined">upload</span>
+            {{ importing ? 'Import en cours...' : 'Importer' }}
           </button>
-          <button @click="showImportModal = false" class="btn-cancel">Annuler</button>
+          <button 
+            @click="closeImportModal" 
+            :disabled="importing"
+            class="btn-cancel"
+          >
+            Annuler
+          </button>
         </div>
       </div>
     </div>
@@ -469,7 +646,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { adhesionsApi, cartesApi } from '@/services/api';
 
@@ -492,10 +669,17 @@ const photoPreview = ref<string | null>(null);
 const selectedPhotoFile = ref<File | null>(null);
 const currentPage = ref(1);
 const totalPages = ref(1);
+// viewMode supprimé - on affiche tout dans un seul tableau
 const totalAdhesions = ref(0);
-const limitPerPage = 50;
+const limitPerPage = ref(100); // Limite par page (modifiable)
+const showAll = ref(false); // Option pour afficher toutes les adhésions
 const generatingCarte = ref<number | null>(null);
 const showFilters = ref(false);
+const openActionsMenu = ref<number | null>(null); // ID de l'adhésion dont le menu est ouvert
+
+// Tri des colonnes
+const sortBy = ref<string | null>(null);
+const sortOrder = ref<'asc' | 'desc'>('asc');
 
 const syncForm = ref({
   campaignId: '',
@@ -507,6 +691,7 @@ const filters = ref({
   statut: '',
   moyen_paiement: '',
   helloasso_campaign_id: '',
+  source: '',
 });
 
 const formData = ref({
@@ -527,6 +712,9 @@ const availableYears = ref<number[]>([]);
 
 const statuts = [
   { value: 'actif', label: 'Actif', icon: 'check_circle' },
+  { value: 'inactif', label: 'Inactif', icon: 'pause_circle' },
+  { value: 'suspendu', label: 'Suspendu', icon: 'block' },
+  { value: 'banni', label: 'Banni', icon: 'block' },
   { value: 'expire', label: 'Expiré', icon: 'cancel' },
   { value: 'renouvele', label: 'Renouvelé', icon: 'refresh' },
   { value: 'a_generer', label: 'À générer', icon: 'pending' },
@@ -540,29 +728,128 @@ const moyensPaiement = [
   { value: 'virement', label: 'Virement', icon: 'account_balance' },
 ];
 
-// Computed
-const adhesionsByYear = computed(() => {
-  const grouped: Record<number, any[]> = {};
+// Fonction pour appliquer tous les filtres
+function applyAllFilters(adhesion: any): boolean {
+  // Filtre de recherche
+  if (filters.value.search) {
+    const search = filters.value.search.toLowerCase();
+    const searchFields = [
+      adhesion.nom || '',
+      adhesion.prenom || '',
+      adhesion.email || '',
+      adhesion.helloasso_id || '',
+      adhesion.telephone || ''
+    ].map(f => f.toLowerCase());
+    
+    if (!searchFields.some(field => field.includes(search))) {
+      return false;
+    }
+  }
   
-  adhesions.value.forEach(adhesion => {
+  // Filtre par année
+  if (filters.value.annee) {
     if (adhesion.date_adhesion) {
       const year = new Date(adhesion.date_adhesion).getFullYear();
-      if (!grouped[year]) {
-        grouped[year] = [];
+      if (year.toString() !== filters.value.annee) {
+        return false;
       }
-      grouped[year].push(adhesion);
+    } else {
+      return false;
     }
-  });
+  }
+  
+  // Filtre par statut
+  if (filters.value.statut) {
+    if (adhesion.statut !== filters.value.statut) {
+      return false;
+    }
+  }
+  
+  // Filtre par moyen de paiement
+  if (filters.value.moyen_paiement) {
+    if (adhesion.moyen_paiement !== filters.value.moyen_paiement) {
+      return false;
+    }
+  }
+  
+  // Filtre par source
+  if (filters.value.source) {
+    if (adhesion.source !== filters.value.source) {
+      return false;
+    }
+  }
+  
+  // Filtre par campagne Hello Asso
+  if (filters.value.helloasso_campaign_id) {
+    if (adhesion.helloasso_campaign_id !== filters.value.helloasso_campaign_id) {
+      return false;
+    }
+  }
+  
+  return true;
+}
 
-  return Object.keys(grouped)
-    .map(year => ({
-      year: parseInt(year),
-      adhesions: grouped[parseInt(year)].sort((a, b) => 
-        new Date(b.date_adhesion).getTime() - new Date(a.date_adhesion).getTime()
-      )
-    }))
-    .sort((a, b) => b.year - a.year);
+// Computed
+// Computed - Toutes les adhésions filtrées et triées
+const filteredAdhesions = computed(() => {
+  console.log('🔍 Calcul filteredAdhesions - adhesions.value:', adhesions.value?.length, 'filtres:', filters.value);
+  
+  if (!adhesions.value || !Array.isArray(adhesions.value)) {
+    console.log('⚠️ adhesions.value n\'est pas un tableau valide');
+    return [];
+  }
+  
+  let filtered = adhesions.value.filter(adhesion => {
+    const passes = applyAllFilters(adhesion);
+    if (!passes) {
+      console.log('❌ Adhésion filtrée:', adhesion.id, adhesion.nom, adhesion.prenom);
+    }
+    return passes;
+  });
+  
+  // Appliquer le tri si une colonne est sélectionnée
+  if (sortBy.value) {
+    filtered = [...filtered].sort((a, b) => {
+      let aValue: any = a[sortBy.value!];
+      let bValue: any = b[sortBy.value!];
+      
+      // Gérer les valeurs nulles/undefined
+      if (aValue === null || aValue === undefined) aValue = '';
+      if (bValue === null || bValue === undefined) bValue = '';
+      
+      // Gérer les dates
+      if (sortBy.value === 'date_adhesion') {
+        aValue = aValue ? new Date(aValue).getTime() : 0;
+        bValue = bValue ? new Date(bValue).getTime() : 0;
+      }
+      
+      // Gérer les nombres
+      if (sortBy.value === 'tarif') {
+        aValue = parseFloat(aValue) || 0;
+        bValue = parseFloat(bValue) || 0;
+      }
+      
+      // Gérer les chaînes de caractères
+      if (typeof aValue === 'string') {
+        aValue = aValue.toLowerCase();
+      }
+      if (typeof bValue === 'string') {
+        bValue = bValue.toLowerCase();
+      }
+      
+      // Comparaison
+      if (aValue < bValue) return sortOrder.value === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortOrder.value === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }
+  
+  console.log('✅ filteredAdhesions:', filtered.length, 'sur', adhesions.value.length, 'tri:', sortBy.value, sortOrder.value);
+  return filtered;
 });
+
+// adhesionsByYear supprimé - plus utilisé
+
 
 const activeFiltersCount = computed(() => {
   let count = 0;
@@ -576,24 +863,78 @@ const activeFiltersCount = computed(() => {
 
 const hasActiveFilters = computed(() => activeFiltersCount.value > 0);
 
+const totalAmount = computed(() => {
+  return adhesions.value.reduce((sum, a) => sum + (parseFloat(a.tarif) || 0), 0);
+});
+
 // Fonctions
+function formatAmount(amount: number): string {
+  return new Intl.NumberFormat('fr-FR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+function hasValidPhoto(photoUrl: string | null | undefined): boolean {
+  if (!photoUrl) return false;
+  if (photoUrl === 'null') return false;
+  if (typeof photoUrl !== 'string') return false;
+  if (photoUrl.trim() === '') return false;
+  return true;
+}
+
 function getImageUrl(photoUrl: string | null | undefined): string {
-  if (!photoUrl) return '';
-  if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
-    return photoUrl;
+  if (!hasValidPhoto(photoUrl)) {
+    console.warn('⚠️ Photo URL invalide:', photoUrl);
+    return '';
   }
-  if (photoUrl.startsWith('/uploads/') || photoUrl.startsWith('uploads/')) {
+  
+  const url = photoUrl!.trim();
+  
+  // URLs locales (uploads)
+  if (url.startsWith('/uploads/') || url.startsWith('uploads/')) {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-    return photoUrl.startsWith('/uploads/') ? `${apiUrl}${photoUrl}` : `${apiUrl}/${photoUrl}`;
+    const finalUrl = url.startsWith('/uploads/') ? `${apiUrl}${url}` : `${apiUrl}/${url}`;
+    console.log('📸 URL locale:', finalUrl);
+    return finalUrl;
   }
-  if (photoUrl.startsWith('data:') || photoUrl.startsWith('blob:')) {
-    return photoUrl;
+  
+  // Data URLs et Blob URLs
+  if (url.startsWith('data:') || url.startsWith('blob:')) {
+    console.log('📸 Data/Blob URL détectée');
+    return url;
   }
-  return photoUrl;
+  
+  // URLs externes (Hello Asso, etc.) - utiliser le proxy pour éviter CORS
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    const encodedUrl = encodeURIComponent(url);
+    const finalUrl = `${apiUrl}/api/images/proxy?url=${encodedUrl}`;
+    console.log('📸 URL externe (proxy):', url.substring(0, 50) + '...');
+    return finalUrl;
+  }
+  
+  console.warn('⚠️ Format URL non reconnu:', url);
+  return url;
 }
 
 function handleImageError(event: Event) {
   const img = event.target as HTMLImageElement;
+  console.warn('❌ Erreur chargement image miniature:', img.src);
+  // Cacher l'image et afficher le placeholder
+  const thumbnail = img.closest('.photo-thumbnail');
+  if (thumbnail) {
+    img.style.display = 'none';
+    // S'assurer que le placeholder est visible
+    const placeholder = thumbnail.querySelector('.photo-placeholder') as HTMLElement;
+    if (placeholder) {
+      placeholder.style.display = 'flex';
+    }
+  }
+}
+
+function handlePreviewImageError(event: Event) {
+  const img = event.target as HTMLImageElement;
+  console.warn('⚠️ Erreur chargement image preview:', img.src);
   img.style.display = 'none';
 }
 
@@ -601,13 +942,280 @@ function formatDate(date: string) {
   if (!date) return 'Date invalide';
   try {
     return new Date(date).toLocaleDateString('fr-FR', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
     });
   } catch {
     return 'Date invalide';
   }
+}
+
+function formatPaymentType(moyen: string | null | undefined): string {
+  if (!moyen) return '-';
+  const types: Record<string, string> = {
+    especes: 'Espèces',
+    cb: 'Carte',
+    cheque: 'Chèque',
+    virement: 'Virement',
+    helloasso: 'Hello Asso',
+  };
+  return types[moyen] || moyen;
+}
+
+function formatSource(source: string | null | undefined): string {
+  if (!source) return 'Hello Asso';
+  if (source === 'online') return 'En-ligne';
+  if (source === 'offline') return 'Hors ligne';
+  return 'Hello Asso';
+}
+
+async function handleAction(adhesion: any, action: string) {
+  console.log('🔵 Action déclenchée:', action, 'pour adhésion:', adhesion.id);
+  
+  // Fermer le menu d'actions
+  openActionsMenu.value = null;
+  
+  try {
+    switch (action) {
+      case 'incomplet':
+        // Marquer comme incomplet
+        console.log('📝 Mise à jour statut: inactif');
+        try {
+          const response = await adhesionsApi.update(adhesion.id, { statut: 'inactif' });
+          // Mettre à jour localement l'adhésion dans le tableau
+          const index = adhesions.value.findIndex((a: any) => a.id === adhesion.id);
+          if (index !== -1 && response.data?.data) {
+            adhesions.value[index] = { ...adhesions.value[index], ...response.data.data };
+          }
+          alert('Adhésion marquée comme incomplète');
+        } catch (error: any) {
+          console.error('❌ Erreur mise à jour statut incomplet:', error);
+          alert(error.response?.data?.error || error.message || 'Erreur lors de la mise à jour');
+        }
+        break;
+      case 'a_generer':
+        // Générer une carte
+        console.log('🎴 Génération carte pour adhésion:', adhesion.id);
+        try {
+          await cartesApi.generate(adhesion.id);
+          alert('Carte générée avec succès !');
+          await loadAdhesions(currentPage.value);
+        } catch (error: any) {
+          console.error('❌ Erreur génération carte:', error);
+          const errorMsg = error.response?.data?.error || error.message || 'Erreur lors de la génération de la carte';
+          console.error('Détails erreur:', {
+            status: error.response?.status,
+            statusText: error.response?.statusText,
+            url: error.config?.url,
+            method: error.config?.method
+          });
+          alert(errorMsg);
+        }
+        break;
+      case 'delivree':
+        // Marquer comme délivrée
+        console.log('✅ Marquage carte comme délivrée');
+        try {
+          const cartesResponse = await cartesApi.list({ adhesion_id: adhesion.id });
+          console.log('📋 Cartes trouvées:', cartesResponse.data);
+          const cartes = cartesResponse.data.data || cartesResponse.data || [];
+          if (cartes.length > 0) {
+            console.log('📤 Marquage carte ID:', cartes[0].id);
+            await cartesApi.markAsDelivered(cartes[0].id);
+            alert('Carte marquée comme délivrée');
+            await loadAdhesions(currentPage.value);
+          } else {
+            alert('Aucune carte trouvée pour cette adhésion');
+          }
+        } catch (error: any) {
+          console.error('❌ Erreur marquage délivrée:', error);
+          const errorMsg = error.response?.data?.error || error.message || 'Erreur lors de la mise à jour';
+          console.error('Détails erreur:', {
+            status: error.response?.status,
+            statusText: error.response?.statusText,
+            url: error.config?.url,
+            method: error.config?.method
+          });
+          alert(errorMsg);
+        }
+        break;
+      case 'suspendu':
+        console.log('⏸️ Mise à jour statut: suspendu');
+        try {
+          const response = await adhesionsApi.update(adhesion.id, { statut: 'suspendu' });
+          // Mettre à jour localement l'adhésion dans le tableau
+          const index = adhesions.value.findIndex((a: any) => a.id === adhesion.id);
+          if (index !== -1 && response.data?.data) {
+            adhesions.value[index] = { ...adhesions.value[index], ...response.data.data };
+          }
+          alert('Adhésion suspendue');
+        } catch (error: any) {
+          console.error('❌ Erreur mise à jour statut suspendu:', error);
+          const errorMsg = error.response?.data?.error || error.message || 'Erreur lors de la mise à jour du statut';
+          console.error('Détails erreur:', {
+            status: error.response?.status,
+            statusText: error.response?.statusText,
+            url: error.config?.url,
+            method: error.config?.method,
+            data: error.response?.data
+          });
+          alert(errorMsg);
+        }
+        break;
+      case 'inactif':
+        console.log('⏸️ Mise à jour statut: inactif');
+        try {
+          const response = await adhesionsApi.update(adhesion.id, { statut: 'inactif' });
+          // Mettre à jour localement l'adhésion dans le tableau
+          const index = adhesions.value.findIndex((a: any) => a.id === adhesion.id);
+          if (index !== -1 && response.data?.data) {
+            adhesions.value[index] = { ...adhesions.value[index], ...response.data.data };
+          }
+          alert('Adhésion marquée comme inactive');
+        } catch (error: any) {
+          console.error('❌ Erreur mise à jour statut inactif:', error);
+          const errorMsg = error.response?.data?.error || error.message || 'Erreur lors de la mise à jour du statut';
+          console.error('Détails erreur:', {
+            status: error.response?.status,
+            statusText: error.response?.statusText,
+            url: error.config?.url,
+            method: error.config?.method,
+            data: error.response?.data
+          });
+          alert(errorMsg);
+        }
+        break;
+      case 'modifier':
+        console.log('✏️ Ouverture formulaire modification');
+        editingAdhesion.value = adhesion;
+        formData.value = {
+          nom: adhesion.nom || '',
+          prenom: adhesion.prenom || '',
+          email: adhesion.email || '',
+          telephone: adhesion.telephone || '',
+          date_adhesion: adhesion.date_adhesion ? new Date(adhesion.date_adhesion).toISOString().split('T')[0] : '',
+          tarif: adhesion.tarif || 0,
+          moyen_paiement: adhesion.moyen_paiement || 'helloasso',
+          statut: adhesion.statut || 'actif',
+          helloasso_id: adhesion.helloasso_id || '',
+          helloasso_campaign_id: adhesion.helloasso_campaign_id || '',
+          photo_url: adhesion.photo_url || '',
+        };
+        // Réinitialiser les champs photo
+        selectedPhotoFile.value = null;
+        photoUrlInput.value = adhesion.photo_url || '';
+        // Afficher la photo existante si disponible
+        if (adhesion.photo_url) {
+          photoPreview.value = getImageUrl(adhesion.photo_url);
+        } else {
+          photoPreview.value = null;
+        }
+        showFormModal.value = true;
+        break;
+      case 'voir':
+        // Naviguer vers la page de détail
+        console.log('👁️ Navigation vers détail adhésion:', adhesion.id);
+        const detailPath = `/app/adhesions/${adhesion.id}`;
+        console.log('📍 Chemin:', detailPath);
+        router.push(detailPath).catch((err) => {
+          console.error('❌ Erreur navigation:', err);
+          alert('Erreur lors de la navigation vers la page de détail');
+        });
+        break;
+      case 'supprimer':
+        if (confirm(`Êtes-vous sûr de vouloir supprimer l'adhésion de ${adhesion.prenom} ${adhesion.nom} ?`)) {
+          console.log('🗑️ Suppression adhésion:', adhesion.id);
+          try {
+            await adhesionsApi.delete(adhesion.id);
+            alert('Adhésion supprimée avec succès');
+            await loadAdhesions(currentPage.value);
+          } catch (error: any) {
+            console.error('❌ Erreur suppression:', error);
+            const errorMsg = error.response?.data?.error || error.message || 'Erreur lors de la suppression';
+            console.error('Détails erreur:', {
+              status: error.response?.status,
+              statusText: error.response?.statusText,
+              url: error.config?.url,
+              method: error.config?.method
+            });
+            alert(errorMsg);
+          }
+        }
+        break;
+      default:
+        console.warn('⚠️ Action non reconnue:', action);
+        alert(`Action "${action}" non reconnue`);
+    }
+  } catch (error: any) {
+    console.error('❌ Erreur dans handleAction:', error);
+    const errorMsg = error.response?.data?.error || error.message || 'Une erreur est survenue';
+    console.error('Détails erreur:', {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      url: error.config?.url,
+      method: error.config?.method,
+      action
+    });
+    alert(errorMsg);
+  }
+}
+
+function getStatusIconClass(statut: string | null | undefined): string {
+  if (!statut) return 'status-default';
+  const classes: Record<string, string> = {
+    actif: 'status-success',
+    expire: 'status-warning',
+    renouvele: 'status-info',
+    a_generer: 'status-warning',
+  };
+  return classes[statut] || 'status-default';
+}
+
+function getStatusIcon(statut: string | null | undefined): string {
+  if (!statut) return 'help';
+  const icons: Record<string, string> = {
+    actif: 'check_circle',
+    inactif: 'pause_circle',
+    suspendu: 'block',
+    banni: 'block',
+    expire: 'cancel',
+    renouvele: 'refresh',
+    a_generer: 'pending',
+  };
+  return icons[statut] || 'help';
+}
+
+function toggleSelectAll(event: Event) {
+  const target = event.target as HTMLInputElement;
+  if (target.checked) {
+    selectedAdhesions.value = filteredAdhesions.value.map(a => a.id);
+  } else {
+    selectedAdhesions.value = [];
+  }
+}
+
+function toggleActionsMenu(adhesionId: number) {
+  console.log('🔘 Toggle menu pour adhésion:', adhesionId, 'Menu actuel:', openActionsMenu.value);
+  if (openActionsMenu.value === adhesionId) {
+    openActionsMenu.value = null;
+    console.log('❌ Menu fermé');
+  } else {
+    openActionsMenu.value = adhesionId;
+    console.log('✅ Menu ouvert pour:', adhesionId);
+  }
+}
+
+function toggleSort(column: string) {
+  if (sortBy.value === column) {
+    // Si on clique sur la même colonne, inverser l'ordre
+    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
+  } else {
+    // Sinon, trier par cette colonne en ordre croissant
+    sortBy.value = column;
+    sortOrder.value = 'asc';
+  }
+  console.log('🔄 Tri:', column, sortOrder.value);
 }
 
 function formatPaymentMethod(moyen: string) {
@@ -635,6 +1243,9 @@ function getPaymentIcon(moyen: string): string {
 function formatStatut(statut: string) {
   const statuts: Record<string, string> = {
     actif: 'Actif',
+    inactif: 'Inactif',
+    suspendu: 'Suspendu',
+    banni: 'Banni',
     expire: 'Expiré',
     renouvele: 'Renouvelé',
     a_generer: 'À générer',
@@ -645,6 +1256,9 @@ function formatStatut(statut: string) {
 function getStatutIcon(statut: string): string {
   const icons: Record<string, string> = {
     actif: 'check_circle',
+    inactif: 'pause_circle',
+    suspendu: 'block',
+    banni: 'block',
     expire: 'cancel',
     renouvele: 'refresh',
     a_generer: 'pending',
@@ -653,7 +1267,17 @@ function getStatutIcon(statut: string): string {
 }
 
 function isAdhesionComplete(adhesion: any): boolean {
-  return !!(adhesion.nom && adhesion.prenom && adhesion.email && adhesion.date_adhesion && adhesion.tarif);
+  // Vérifier que tous les champs requis sont présents et non vides
+  const hasPhoto = !!(adhesion.photo_url && adhesion.photo_url.trim() !== '' && adhesion.photo_url !== 'null');
+  const hasHelloAssoRef = !!(adhesion.helloasso_id && adhesion.helloasso_id.toString().trim() !== '');
+  const hasNom = !!(adhesion.nom && adhesion.nom.trim() !== '');
+  const hasPrenom = !!(adhesion.prenom && adhesion.prenom.trim() !== '');
+  const hasDateAdhesion = !!(adhesion.date_adhesion);
+  const hasMontant = !!(adhesion.tarif && parseFloat(adhesion.tarif) > 0);
+  const hasTypePaiement = !!(adhesion.moyen_paiement && adhesion.moyen_paiement.trim() !== '');
+  const hasStatut = !!(adhesion.statut && adhesion.statut.trim() !== '');
+  
+  return hasPhoto && hasHelloAssoRef && hasNom && hasPrenom && hasDateAdhesion && hasMontant && hasTypePaiement && hasStatut;
 }
 
 function toggleStatutFilter(value: string) {
@@ -684,6 +1308,10 @@ function resetFilters() {
 }
 
 function applyFilters() {
+  if (loading.value || isLoading) {
+    console.log('⏳ Application des filtres ignorée, chargement en cours');
+    return;
+  }
   loadAdhesions(1);
 }
 
@@ -693,11 +1321,17 @@ function clearSearch() {
 }
 
 let searchTimeout: NodeJS.Timeout;
+const isSearching = ref(false);
+
 function debounceSearch() {
   clearTimeout(searchTimeout);
   searchTimeout = setTimeout(() => {
-    applyFilters();
-  }, 300);
+    if (!isSearching.value && !loading.value && !isLoading) {
+      isSearching.value = true;
+      applyFilters();
+      isSearching.value = false;
+    }
+  }, 800); // Augmenté à 800ms pour réduire les requêtes
 }
 
 async function loadAvailableYears() {
@@ -724,13 +1358,28 @@ async function loadAvailableYears() {
   }
 }
 
+let isLoading = false; // Flag pour éviter les appels multiples
+
 async function loadAdhesions(page: number = 1) {
+  // Protection contre les appels multiples
+  if (loading.value || isLoading) {
+    console.log('⏳ Chargement déjà en cours, ignoré', {
+      loading: loading.value,
+      isLoading,
+      page,
+      stack: new Error().stack
+    });
+    return;
+  }
+  
+  isLoading = true;
   loading.value = true;
   currentPage.value = page;
+  
   try {
     const params: any = {
-      limit: limitPerPage.toString(),
-      page: page.toString(),
+      limit: showAll.value ? '1000' : limitPerPage.value.toString(), // Limité à 1000 max pour éviter les erreurs 429
+      page: showAll.value ? '1' : page.toString(), // Toujours page 1 si on charge tout
     };
     if (filters.value.search) params.search = filters.value.search;
     if (filters.value.annee) params.annee = filters.value.annee;
@@ -739,7 +1388,7 @@ async function loadAdhesions(page: number = 1) {
     if (filters.value.source) params.source = filters.value.source;
     if (filters.value.helloasso_campaign_id) params.helloasso_campaign_id = filters.value.helloasso_campaign_id;
 
-    console.log('📡 Chargement des adhésions avec params:', params);
+    console.log('📡 Chargement des adhésions avec params:', params, 'page:', page);
     const response = await adhesionsApi.list(params);
     console.log('✅ Réponse reçue:', response);
     console.log('📦 Données:', response.data);
@@ -758,12 +1407,28 @@ async function loadAdhesions(page: number = 1) {
     
     adhesions.value = adhesionsData;
     console.log('✅ Adhésions chargées:', adhesions.value.length);
+    console.log('📋 Première adhésion (exemple):', adhesions.value[0]);
     
     const pagination = response.data?.pagination || {};
     totalAdhesions.value = pagination.total || adhesions.value.length;
-    totalPages.value = Math.ceil(totalAdhesions.value / limitPerPage);
+    console.log('📊 Total adhésions:', totalAdhesions.value);
+    
+    // Si on affiche tout, pas de pagination
+    if (showAll.value) {
+      totalPages.value = 1;
+    } else {
+      totalPages.value = Math.ceil(totalAdhesions.value / limitPerPage.value);
+    }
+    
+    console.log(`✅ ${adhesions.value.length} adhésion(s) chargée(s) sur ${totalAdhesions.value} total`);
   } catch (error: any) {
     console.error('❌ Erreur lors du chargement des adhésions:', error);
+    
+    // Gérer spécifiquement les erreurs 429
+    if (error.response?.status === 429) {
+      alert('Trop de requêtes. Veuillez patienter quelques instants avant de réessayer.');
+    }
+    
     console.error('❌ Détails:', {
       message: error.message,
       response: error.response?.data,
@@ -774,6 +1439,7 @@ async function loadAdhesions(page: number = 1) {
     adhesions.value = [];
   } finally {
     loading.value = false;
+    isLoading = false;
   }
 }
 
@@ -795,11 +1461,34 @@ function openCreateModal() {
   photoPreview.value = null;
   photoUrlInput.value = '';
   selectedPhotoFile.value = null;
+  
+  // Réinitialiser l'input file
+  setTimeout(() => {
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = '';
+    }
+  }, 100);
+  
   showFormModal.value = true;
 }
 
 function closeFormModal() {
   showFormModal.value = false;
+  editingAdhesion.value = null;
+  // Réinitialiser les champs photo
+  photoPreview.value = null;
+  photoUrlInput.value = '';
+  selectedPhotoFile.value = null;
+  formData.value.photo_url = '';
+  
+  // Réinitialiser l'input file
+  setTimeout(() => {
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = '';
+    }
+  }, 100);
 }
 
 function editAdhesion(adhesion: any) {
@@ -827,48 +1516,122 @@ async function saveAdhesion() {
   saving.value = true;
   try {
     const formDataToSend = new FormData();
+    
+    // Ajouter tous les champs sauf photo_url si on a un fichier
     Object.keys(formData.value).forEach(key => {
-      if (key !== 'photo_url' || !selectedPhotoFile.value) {
-        formDataToSend.append(key, (formData.value as any)[key]);
+      const value = (formData.value as any)[key];
+      // Ne pas envoyer photo_url si on a un fichier à uploader
+      if (key === 'photo_url' && selectedPhotoFile.value) {
+        return; // Skip photo_url si on upload un fichier
+      }
+      // Envoyer photo_url seulement si c'est une URL (pas de fichier)
+      if (key === 'photo_url' && !selectedPhotoFile.value && value) {
+        formDataToSend.append(key, value);
+        return;
+      }
+      // Envoyer tous les autres champs
+      if (key !== 'photo_url') {
+        if (value !== null && value !== undefined) {
+          formDataToSend.append(key, value.toString());
+        }
       }
     });
     
+    // Ajouter le fichier photo si présent
     if (selectedPhotoFile.value) {
       formDataToSend.append('photo', selectedPhotoFile.value);
+    } else if (photoUrlInput.value && !selectedPhotoFile.value) {
+      // Si on a une URL mais pas de fichier, envoyer l'URL
+      formDataToSend.append('photo_url', photoUrlInput.value);
     }
+
+    console.log('💾 Sauvegarde adhésion:', {
+      editing: !!editingAdhesion.value,
+      hasFile: !!selectedPhotoFile.value,
+      hasUrl: !!photoUrlInput.value
+    });
 
     if (editingAdhesion.value) {
       await adhesionsApi.update(editingAdhesion.value.id, formDataToSend);
+      alert('Adhésion modifiée avec succès !');
     } else {
       await adhesionsApi.create(formDataToSend);
+      alert('Adhésion créée avec succès !');
     }
     
     closeFormModal();
+    // Recharger les données pour voir les changements
     await loadAdhesions(currentPage.value);
   } catch (error: any) {
-    console.error('Erreur lors de la sauvegarde:', error);
-    alert(error.response?.data?.error || 'Erreur lors de la sauvegarde');
+    console.error('❌ Erreur lors de la sauvegarde:', error);
+    const errorMsg = error.response?.data?.error || error.message || 'Erreur lors de la sauvegarde';
+    alert(errorMsg);
   } finally {
     saving.value = false;
+  }
+}
+
+async function editAdhesionStatus(adhesion: any, newStatus: string) {
+  if (!confirm(`Confirmer le changement de statut pour ${adhesion.prenom} ${adhesion.nom} à "${formatStatut(newStatus)}" ?`)) {
+    return;
+  }
+  try {
+    await adhesionsApi.update(adhesion.id, { statut: newStatus });
+    alert('Statut mis à jour avec succès !');
+    await loadAdhesions(currentPage.value); // Recharger la page actuelle
+  } catch (error: any) {
+    alert(error.response?.data?.error || 'Erreur lors de la mise à jour du statut');
   }
 }
 
 function handlePhotoFileSelect(event: Event) {
   const input = event.target as HTMLInputElement;
   if (input.files && input.files[0]) {
-    selectedPhotoFile.value = input.files[0];
+    const file = input.files[0];
+    
+    // Vérifier la taille du fichier (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Le fichier est trop volumineux. Taille maximale : 10MB');
+      input.value = '';
+      return;
+    }
+    
+    // Vérifier le type de fichier
+    if (!file.type.startsWith('image/')) {
+      alert('Veuillez sélectionner un fichier image');
+      input.value = '';
+      return;
+    }
+    
+    selectedPhotoFile.value = file;
+    // Réinitialiser l'URL si on sélectionne un fichier
+    photoUrlInput.value = '';
+    formData.value.photo_url = '';
+    
+    // Afficher la prévisualisation
     const reader = new FileReader();
     reader.onload = (e) => {
       photoPreview.value = e.target?.result as string;
     };
-    reader.readAsDataURL(input.files[0]);
+    reader.readAsDataURL(file);
+    
+    console.log('📷 Fichier sélectionné:', file.name, file.size, 'bytes');
   }
 }
 
 function updatePhotoFromUrl() {
-  if (photoUrlInput.value) {
-    photoPreview.value = photoUrlInput.value;
-    formData.value.photo_url = photoUrlInput.value;
+  if (photoUrlInput.value && photoUrlInput.value.trim() !== '') {
+    // Réinitialiser le fichier si on utilise une URL
+    selectedPhotoFile.value = null;
+    formData.value.photo_url = photoUrlInput.value.trim();
+    photoPreview.value = photoUrlInput.value.trim();
+    console.log('🔗 URL photo mise à jour:', photoUrlInput.value);
+  } else {
+    // Si l'URL est vide, réinitialiser
+    if (!selectedPhotoFile.value) {
+      photoPreview.value = null;
+      formData.value.photo_url = '';
+    }
   }
 }
 
@@ -877,6 +1640,14 @@ function clearPhoto() {
   photoUrlInput.value = '';
   selectedPhotoFile.value = null;
   formData.value.photo_url = '';
+  
+  // Réinitialiser aussi l'input file
+  const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+  if (fileInput) {
+    fileInput.value = '';
+  }
+  
+  console.log('🗑️ Photo supprimée');
 }
 
 function viewDetails(id: number) {
@@ -932,20 +1703,36 @@ async function applyBulkStatus() {
 }
 
 function closeSyncModal() {
+  if (syncing.value) {
+    if (!confirm('La synchronisation est en cours. Voulez-vous vraiment fermer ?')) {
+      return;
+    }
+  }
   showSyncModal.value = false;
   syncForm.value = { campaignId: '' };
 }
 
 async function syncHelloAsso() {
+  if (!syncForm.value.campaignId || syncForm.value.campaignId.trim() === '') {
+    alert('Veuillez saisir l\'ID de la campagne HelloAsso');
+    return;
+  }
+  
   syncing.value = true;
   try {
+    console.log('🔄 Synchronisation HelloAsso avec campagne:', syncForm.value.campaignId);
     const response = await adhesionsApi.syncHelloAsso(syncForm.value);
-    alert(`Synchronisation terminée !\n\nCréées: ${response.data.stats?.created || 0}\nMises à jour: ${response.data.stats?.updated || 0}`);
+    const stats = response.data?.stats || response.data || {};
+    const created = stats.created || 0;
+    const updated = stats.updated || 0;
+    
+    alert(`Synchronisation terminée !\n\n✅ Créées: ${created}\n🔄 Mises à jour: ${updated}`);
     closeSyncModal();
     await loadAdhesions(1);
   } catch (error: any) {
-    console.error('Erreur lors de la synchronisation:', error);
-    alert(error.response?.data?.error || 'Erreur lors de la synchronisation');
+    console.error('❌ Erreur lors de la synchronisation:', error);
+    const errorMsg = error.response?.data?.error || error.message || 'Erreur lors de la synchronisation';
+    alert(errorMsg);
   } finally {
     syncing.value = false;
   }
@@ -959,31 +1746,39 @@ function handleFileSelect(event: Event) {
 }
 
 async function importCsv() {
-  if (!selectedFile.value) return;
+  if (!selectedFile.value) {
+    alert('Veuillez sélectionner un fichier CSV');
+    return;
+  }
   
   importing.value = true;
   try {
+    console.log('📤 Import CSV:', selectedFile.value.name, selectedFile.value.size, 'bytes');
     const formData = new FormData();
     formData.append('csv', selectedFile.value);
+    
     const response = await adhesionsApi.importCsv(formData);
+    console.log('✅ Réponse import:', response.data);
     
     // Si l'import nécessite une validation
-    if (response.data.importId) {
-      // Valider automatiquement l'import
+    if (response.data?.importId) {
+      console.log('📋 Validation de l\'import:', response.data.importId);
       await adhesionsApi.validateImport(response.data.importId, {
-        records: response.data.records,
+        records: response.data.records || [],
         duplicateActions: {},
         forceUpdate: true
       });
     }
     
-    alert('Import réussi !');
-    showImportModal.value = false;
-    selectedFile.value = null;
+    const importedCount = response.data?.imported || response.data?.records?.length || 0;
+    alert(`Import terminé avec succès !\n\n✅ ${importedCount} adhésion(s) importée(s)`);
+    
+    closeImportModal();
     await loadAdhesions(1);
   } catch (error: any) {
-    console.error('Erreur lors de l\'import:', error);
-    alert(error.response?.data?.error || error.userMessage || 'Erreur lors de l\'import');
+    console.error('❌ Erreur lors de l\'import:', error);
+    const errorMsg = error.response?.data?.error || error.userMessage || error.message || 'Erreur lors de l\'import';
+    alert(errorMsg);
   } finally {
     importing.value = false;
   }
@@ -991,83 +1786,285 @@ async function importCsv() {
 
 async function exportCsv() {
   try {
+    console.log('📥 Export CSV avec filtres:', filters.value);
     const params: any = {};
     if (filters.value.annee) params.annee = filters.value.annee;
     if (filters.value.statut) params.statut = filters.value.statut;
     if (filters.value.moyen_paiement) params.moyen_paiement = filters.value.moyen_paiement;
     if (filters.value.source) params.source = filters.value.source;
-    
+    if (filters.value.search) params.search = filters.value.search;
+    if (filters.value.helloasso_campaign_id) params.helloasso_campaign_id = filters.value.helloasso_campaign_id;
+
     const response = await adhesionsApi.exportCsv(params);
     const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `adhesions_${new Date().toISOString().split('T')[0]}.csv`;
+    
+    // Nom du fichier avec date et filtres
+    const dateStr = new Date().toISOString().split('T')[0];
+    const filterStr = Object.keys(params).length > 0 ? '_filtres' : '';
+    a.download = `adhesions_${dateStr}${filterStr}.csv`;
+    
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
+    
+    console.log('✅ Export CSV réussi');
   } catch (error: any) {
-    console.error('Erreur lors de l\'export:', error);
-    alert(error.response?.data?.error || error.userMessage || 'Erreur lors de l\'export');
+    console.error('❌ Erreur lors de l\'export:', error);
+    const errorMsg = error.response?.data?.error || error.message || 'Erreur lors de l\'export';
+    alert(errorMsg);
   }
+}
+
+function refreshAdhesions() {
+  if (loading.value || isLoading) {
+    console.log('⏳ Actualisation ignorée, chargement en cours');
+    return;
+  }
+  console.log('🔄 Actualisation des adhésions');
+  loadAdhesions(currentPage.value);
+}
+
+function handleShowAllChange(event: Event) {
+  const target = event.target as HTMLInputElement;
+  const newValue = target.checked;
+  
+  if (loading.value || isLoading) {
+    // Annuler le changement si un chargement est en cours
+    target.checked = !newValue;
+    showAll.value = !newValue;
+    console.log('⏳ Changement de mode ignoré, chargement en cours');
+    return;
+  }
+  
+  showAll.value = newValue;
+  console.log('🔄 Changement mode affichage:', newValue ? 'Tout' : 'Paginé');
+  
+  // Utiliser nextTick pour s'assurer que le changement est bien appliqué
+  setTimeout(() => {
+    if (!loading.value && !isLoading) {
+      loadAdhesions(1);
+    }
+  }, 100);
+}
+
+function closeImportModal() {
+  if (importing.value) {
+    if (!confirm('L\'import est en cours. Voulez-vous vraiment fermer ?')) {
+      return;
+    }
+  }
+  showImportModal.value = false;
+  selectedFile.value = null;
+  
+  // Réinitialiser l'input file
+  setTimeout(() => {
+    const fileInput = document.querySelector('input[type="file"][accept=".csv"]') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = '';
+    }
+  }, 100);
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
 }
 
 onMounted(async () => {
   await loadAvailableYears();
   await loadAdhesions(1);
+  
+  // Fermer le menu d'actions quand on clique ailleurs
+  document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    const isInActionsDropdown = target.closest('.actions-dropdown');
+    const isInActionsMenu = target.closest('.actions-menu');
+    
+    if (!isInActionsDropdown && !isInActionsMenu) {
+      console.log('🔄 Fermeture du menu (clic extérieur)');
+      openActionsMenu.value = null;
+    }
+  });
 });
 </script>
 
 <style scoped>
+.page-container {
+  width: 100%;
+  max-width: 100%;
+  padding: 0;
+  margin: 0;
+  overflow-x: hidden;
+}
+
 .adhesions-modern {
   width: 100%;
+  max-width: 100%;
   padding: 0;
+  overflow-x: hidden;
 }
 
 /* Header */
 .page-header {
-  background: white;
-  padding: 24px 30px;
-  border-radius: 12px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  background: white;
+  padding: 24px 32px;
+  border-radius: 16px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  border: 1px solid #f0f0f0;
 }
 
 .page-header h1 {
   margin: 0;
   font-size: 28px;
-  font-weight: 700;
-  color: #2c3e50;
+  font-weight: 600;
+  color: #1f2937;
+  letter-spacing: -0.3px;
 }
 
 .header-actions {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
 }
 
-.btn-icon {
+.action-btn-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  border: 1px solid #e0e0e0;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: 1.5px solid #e5e7eb;
   background: white;
   color: #667eea;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
 }
 
-.btn-icon:hover {
-  background: #f5f7fa;
+.action-btn-icon::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(102, 126, 234, 0.1);
+  transform: translate(-50%, -50%);
+  transition: width 0.3s, height 0.3s;
+}
+
+.action-btn-icon:hover::before {
+  width: 100%;
+  height: 100%;
+}
+
+.action-btn-icon:hover {
   border-color: #667eea;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+.action-btn-icon:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.1);
+}
+
+.action-btn-icon:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.action-btn-icon:disabled:hover {
+  border-color: #e5e7eb;
+  box-shadow: none;
+}
+
+.action-btn-icon .material-symbols-outlined {
+  font-size: 22px;
+  position: relative;
+  z-index: 1;
+}
+
+.action-btn-primary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.25);
+  position: relative;
+  overflow: hidden;
+}
+
+.action-btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.action-btn-primary:hover::before {
+  left: 100%;
+}
+
+.action-btn-primary:hover {
+  background: #5568d3;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.action-btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.25);
+}
+
+.action-btn-primary .material-symbols-outlined {
+  font-size: 22px;
+  position: relative;
+  z-index: 1;
+}
+
+.btn-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.2;
+  position: relative;
+  z-index: 1;
+}
+
+.btn-text-line {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.1px;
+  line-height: 1.3;
 }
 
 .btn-primary {
@@ -1285,6 +2282,56 @@ onMounted(async () => {
   font-size: 12px;
   color: #7f8c8d;
   text-transform: uppercase;
+}
+
+.summary-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background: white;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.summary-text {
+  font-size: 14px;
+  color: #374151;
+  font-weight: 500;
+}
+
+.total-info {
+  color: #6b7280;
+  font-size: 13px;
+  margin-left: 8px;
+}
+
+.summary-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.toggle-all {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #374151;
+  user-select: none;
+}
+
+.toggle-all input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #667eea;
+}
+
+.toggle-all:hover {
+  color: #667eea;
 }
 
 .bulk-actions {
@@ -1592,6 +2639,53 @@ onMounted(async () => {
   100% { transform: rotate(360deg); }
 }
 
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+.file-input-large {
+  width: 100%;
+  padding: 12px;
+  border: 2px dashed #d1d5db;
+  border-radius: 8px;
+  background: #f9fafb;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.file-input-large:hover {
+  border-color: #667eea;
+  background: #f3f4f6;
+}
+
+.file-input-large:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.file-info {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #eff6ff;
+  border-radius: 6px;
+  color: #1e40af;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.file-info .material-symbols-outlined {
+  font-size: 20px;
+}
+
+.modal-description {
+  color: #6b7280;
+  margin-bottom: 20px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 /* Empty state */
 .empty-state {
   text-align: center;
@@ -1653,6 +2747,704 @@ onMounted(async () => {
 .pagination-info {
   font-size: 14px;
   color: #7f8c8d;
+}
+
+/* Table View */
+.table-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+}
+
+.table-modern {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  table-layout: fixed;
+}
+
+.table-modern thead {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.table-modern thead th {
+  padding: 12px 8px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  color: white;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sortable-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s;
+}
+
+.sortable-header:hover {
+  opacity: 0.9;
+  transform: translateX(2px);
+}
+
+.sort-icon {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+  opacity: 0.7;
+  transition: all 0.2s;
+}
+
+.sortable-header:hover .sort-icon {
+  opacity: 1;
+}
+
+.sort-icon .material-symbols-outlined {
+  font-size: 18px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.85);
+  transition: all 0.2s;
+}
+
+.sort-icon .material-symbols-outlined.active {
+  color: white;
+  opacity: 1;
+  font-weight: 700;
+}
+
+.sortable-header:hover .sort-icon .material-symbols-outlined {
+  color: white;
+  opacity: 1;
+}
+
+.table-modern thead th:first-child {
+  padding-left: 12px;
+  width: 50px;
+  min-width: 50px;
+}
+
+.table-modern thead th:nth-child(2) {
+  width: 70px;
+  min-width: 70px;
+}
+
+.table-modern thead th:nth-child(3) {
+  width: 80px;
+  min-width: 80px;
+}
+
+.table-modern thead th:nth-child(4) {
+  width: 130px;
+  min-width: 130px;
+}
+
+.table-modern thead th:nth-child(5) {
+  width: 130px;
+  min-width: 130px;
+}
+
+.table-modern thead th:nth-child(6) {
+  width: 150px;
+  min-width: 150px;
+}
+
+.table-modern thead th:nth-child(7) {
+  width: 120px;
+  min-width: 120px;
+}
+
+.table-modern thead th:nth-child(8) {
+  width: 100px;
+  min-width: 100px;
+}
+
+.table-modern thead th:nth-child(9) {
+  width: 130px;
+  min-width: 130px;
+}
+
+.table-modern thead th:nth-child(10) {
+  width: 120px;
+  min-width: 120px;
+}
+
+.table-modern thead th:nth-child(11) {
+  width: 120px;
+  min-width: 120px;
+}
+
+.table-modern thead th:last-child {
+  padding-right: 12px;
+  width: 120px;
+  min-width: 120px;
+}
+
+.table-modern tbody tr {
+  border-bottom: 1px solid #f3f4f6;
+  transition: all 0.2s;
+}
+
+.table-modern tbody tr:hover {
+  background: #f9fafb;
+}
+
+.table-modern tbody tr.selected {
+  background: #eff6ff;
+  border-left: 3px solid #3b82f6;
+}
+
+.table-modern tbody td {
+  padding: 12px 8px;
+  vertical-align: middle;
+  color: #374151;
+  font-size: 13px;
+  border-bottom: 1px solid #f3f4f6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Alignement des cellules avec les colonnes */
+.table-modern tbody td:first-child {
+  padding-left: 12px;
+  width: 50px;
+  min-width: 50px;
+}
+
+.table-modern tbody td:nth-child(2) {
+  width: 70px;
+  min-width: 70px;
+}
+
+.table-modern tbody td:nth-child(3) {
+  width: 80px;
+  min-width: 80px;
+}
+
+.table-modern tbody td:nth-child(4) {
+  width: 130px;
+  min-width: 130px;
+}
+
+.table-modern tbody td:nth-child(5) {
+  width: 130px;
+  min-width: 130px;
+}
+
+.table-modern tbody td:nth-child(6) {
+  width: 150px;
+  min-width: 150px;
+}
+
+.table-modern tbody td:nth-child(7) {
+  width: 120px;
+  min-width: 120px;
+}
+
+.table-modern tbody td:nth-child(8) {
+  width: 100px;
+  min-width: 100px;
+}
+
+.table-modern tbody td:nth-child(9) {
+  width: 130px;
+  min-width: 130px;
+}
+
+.table-modern tbody td:nth-child(10) {
+  width: 120px;
+  min-width: 120px;
+}
+
+.table-modern tbody td:nth-child(11) {
+  width: 120px;
+  min-width: 120px;
+}
+
+.table-modern tbody td:last-child {
+  padding-right: 12px;
+  overflow: visible;
+  position: relative;
+  width: 120px;
+  min-width: 120px;
+}
+
+.table-modern tbody tr:last-child {
+  border-bottom: none;
+}
+
+.status-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+}
+
+.status-icon.status-success {
+  color: #10b981;
+}
+
+.status-icon.status-warning {
+  color: #f59e0b;
+}
+
+.status-icon.status-info {
+  color: #3b82f6;
+}
+
+.status-icon.status-default {
+  color: #94a3b8;
+}
+
+/* Status Dropdown */
+.status-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.status-badge:hover {
+  opacity: 0.8;
+}
+
+.status-badge .material-symbols-outlined {
+  font-size: 16px;
+}
+
+.status-badge.status-actif {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-badge.status-inactif {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-badge.status-suspendu {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.status-badge.status-banni {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.status-badge.status-expire {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.status-badge.status-renouvele {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.status-badge.status-a_generer {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-badge.status-default {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 4px;
+  background: white;
+  min-width: 180px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border-radius: 8px;
+  z-index: 1000;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+}
+
+.status-dropdown:hover .dropdown-content {
+  display: block;
+}
+
+.dropdown-content a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  color: #374151;
+  text-decoration: none;
+  font-size: 14px;
+  transition: background 0.2s;
+  cursor: pointer;
+}
+
+.dropdown-content a:hover {
+  background: #f3f4f6;
+}
+
+.dropdown-content a .material-symbols-outlined {
+  font-size: 18px;
+  color: #6b7280;
+}
+
+/* Photo Thumbnail */
+.etat-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.statut-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.statut-indicator .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.statut-indicator.statut-actif {
+  color: #10b981;
+  background: #d1fae5;
+}
+
+.statut-indicator.statut-inactif {
+  color: #6b7280;
+  background: #e5e7eb;
+}
+
+.statut-indicator.statut-suspendu {
+  color: #f59e0b;
+  background: #fef3c7;
+}
+
+.statut-indicator.statut-banni {
+  color: #ef4444;
+  background: #fee2e2;
+}
+
+.statut-indicator.statut-expire {
+  color: #f97316;
+  background: #fed7aa;
+}
+
+.statut-indicator.statut-renouvele {
+  color: #3b82f6;
+  background: #dbeafe;
+}
+
+.statut-indicator.statut-a_generer {
+  color: #8b5cf6;
+  background: #ede9fe;
+}
+
+.photo-thumbnail {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
+}
+
+.photo-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  background: #f3f4f6;
+}
+
+.photo-thumbnail img[src=""],
+.photo-thumbnail img:not([src]),
+.photo-thumbnail img[src="undefined"] {
+  display: none;
+}
+
+.photo-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
+  color: #9ca3af;
+}
+
+.photo-placeholder .material-symbols-outlined {
+  font-size: 24px;
+}
+
+/* Payment Type Badge */
+.payment-type-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.payment-type-badge.payment-especes {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.payment-type-badge.payment-cb {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.payment-type-badge.payment-cheque {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+.payment-type-badge.payment-virement {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.payment-type-badge.payment-helloasso {
+  background: #fce7f3;
+  color: #9f1239;
+}
+
+.payment-type-badge.payment-default {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+/* Source Badge */
+.source-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.source-badge.source-online {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  color: #1e40af;
+  box-shadow: 0 1px 2px rgba(30, 64, 175, 0.1);
+}
+
+.source-badge.source-offline {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #92400e;
+  box-shadow: 0 1px 2px rgba(146, 64, 14, 0.1);
+}
+
+.source-badge:not(.source-online):not(.source-offline) {
+  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+  color: #4338ca;
+  box-shadow: 0 1px 2px rgba(67, 56, 202, 0.1);
+}
+
+/* Actions Dropdown */
+.actions-dropdown {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.action-statut-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.action-statut-indicator .material-symbols-outlined {
+  font-size: 20px;
+}
+
+.action-statut-indicator.statut-actif {
+  color: #10b981;
+  background: #d1fae5;
+}
+
+.action-statut-indicator.statut-inactif {
+  color: #6b7280;
+  background: #e5e7eb;
+}
+
+.action-statut-indicator.statut-suspendu {
+  color: #f59e0b;
+  background: #fef3c7;
+}
+
+.action-statut-indicator.statut-banni {
+  color: #ef4444;
+  background: #fee2e2;
+}
+
+.action-statut-indicator.statut-expire {
+  color: #f97316;
+  background: #fed7aa;
+}
+
+.action-statut-indicator.statut-renouvele {
+  color: #3b82f6;
+  background: #dbeafe;
+}
+
+.action-statut-indicator.statut-a_generer {
+  color: #8b5cf6;
+  background: #ede9fe;
+}
+
+.actions-btn {
+  background: white;
+  border: 1.5px solid #e5e7eb;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  transition: all 0.2s;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.actions-btn:hover {
+  background: #f9fafb;
+  border-color: #667eea;
+  color: #667eea;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.15);
+}
+
+.actions-btn .material-symbols-outlined {
+  font-size: 22px;
+  font-weight: 500;
+}
+
+.actions-menu {
+  display: block;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  background: white;
+  min-width: 220px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  z-index: 9999;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  padding: 6px;
+  animation: slideDown 0.2s ease-out;
+}
+
+.actions-menu.show {
+  display: block;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.actions-menu a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  color: #374151;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+  cursor: pointer;
+  border-radius: 8px;
+  margin: 2px 0;
+}
+
+.actions-menu a:hover {
+  background: #f3f4f6;
+  transform: translateX(2px);
+}
+
+.actions-menu a.danger {
+  color: #dc2626;
+}
+
+.actions-menu a.danger:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.actions-menu a .material-symbols-outlined {
+  font-size: 20px;
+  color: #6b7280;
+  width: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.actions-menu a.danger .material-symbols-outlined {
+  color: #dc2626;
 }
 
 /* Modals */

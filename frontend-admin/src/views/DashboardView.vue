@@ -1,15 +1,16 @@
 <template>
-  <div class="dashboard">
-    <div class="dashboard-header">
+  <div class="page-container">
+    <div class="page-header">
+      <h1>Tableau de bord</h1>
       <div class="header-actions">
         <div class="year-filter">
           <label>Année :</label>
-          <select v-model="selectedYear" @change="loadDashboardData">
+          <select v-model="selectedYear" @change="loadDashboardData" class="form-select">
             <option v-for="year in availableYears" :key="year" :value="year">{{ year }}</option>
           </select>
         </div>
-        <button @click="loadDashboardData" :disabled="loading" class="btn-refresh">
-          <span v-if="!loading" class="material-symbols-outlined" style="vertical-align: middle; margin-right: 5px;">refresh</span>
+        <button @click="loadDashboardData" :disabled="loading" class="btn-action btn-action-secondary">
+          <span class="material-symbols-outlined">refresh</span>
           {{ loading ? 'Chargement...' : 'Actualiser' }}
         </button>
       </div>
@@ -63,7 +64,7 @@
       <!-- Graphiques principaux -->
       <div class="charts-grid">
         <!-- Graphique en cercle des paiements -->
-        <div class="chart-card">
+        <div class="chart-card full-width">
           <div class="chart-header">
             <h3><span class="material-symbols-outlined" style="vertical-align: middle; margin-right: 5px;">pie_chart</span> Répartition des paiements</h3>
             <span class="chart-subtitle">{{ selectedYear }}</span>
@@ -72,15 +73,16 @@
             <canvas ref="pieChartCanvas"></canvas>
           </div>
         </div>
+      </div>
 
-        <!-- Graphique d'évolution mensuelle -->
-        <div class="chart-card">
+      <!-- Graphique d'évolution du chiffre d'affaires par année -->
+      <div class="charts-grid">
+        <div class="chart-card full-width">
           <div class="chart-header">
-            <h3><span class="material-symbols-outlined" style="vertical-align: middle; margin-right: 5px;">trending_up</span> Évolution mensuelle des adhésions</h3>
-            <span class="chart-subtitle">{{ selectedYear }}</span>
+            <h3><span class="material-symbols-outlined" style="vertical-align: middle; margin-right: 5px;">bar_chart</span> Évolution du chiffre d'affaires par année</h3>
           </div>
           <div class="chart-container">
-            <canvas ref="lineChartCanvas"></canvas>
+            <canvas ref="caChartCanvas"></canvas>
           </div>
         </div>
       </div>
@@ -89,64 +91,15 @@
       <div class="section payments-detail">
         <h2><span class="material-symbols-outlined" style="vertical-align: middle; margin-right: 5px;">credit_card</span> Détails des paiements ({{ selectedYear }})</h2>
         <div class="payments-grid">
-          <div class="payment-card" v-for="(payment, key) in paiementsData" :key="key">
-            <div class="payment-icon"><span class="material-symbols-outlined">{{ getPaymentIcon(key) }}</span></div>
+          <div class="payment-card" v-for="(payment, key) in paiementsData" :key="String(key)">
+            <div class="payment-icon"><span class="material-symbols-outlined">{{ getPaymentIcon(String(key)) }}</span></div>
             <div class="payment-info">
-              <div class="payment-label">{{ getPaymentLabel(key) }}</div>
+              <div class="payment-label">{{ getPaymentLabel(String(key)) }}</div>
               <div class="payment-amount">{{ formatAmount(payment.montant || 0) }} €</div>
               <div class="payment-count">{{ payment.count || 0 }} transaction(s)</div>
             </div>
             <div class="payment-percentage">
               {{ getPaymentPercentage(payment.montant || 0) }}%
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Statistiques détaillées des adhésions -->
-      <div class="section adhesions-detail">
-        <h2><span class="material-symbols-outlined" style="vertical-align: middle; margin-right: 5px;">description</span> Statistiques détaillées des adhésions ({{ selectedYear }})</h2>
-        <div class="adhesions-detail-grid">
-          <div class="detail-card">
-            <div class="detail-icon"><span class="material-symbols-outlined">check_circle</span></div>
-            <div class="detail-content">
-              <div class="detail-value">{{ adhesionsStats.actifs || 0 }}</div>
-              <div class="detail-label">Actives</div>
-            </div>
-          </div>
-          <div class="detail-card">
-            <div class="detail-icon"><span class="material-symbols-outlined">pause_circle</span></div>
-            <div class="detail-content">
-              <div class="detail-value">{{ adhesionsStats.inactifs || 0 }}</div>
-              <div class="detail-label">Inactives</div>
-            </div>
-          </div>
-          <div class="detail-card">
-            <div class="detail-icon"><span class="material-symbols-outlined">block</span></div>
-            <div class="detail-content">
-              <div class="detail-value">{{ adhesionsStats.suspendus || 0 }}</div>
-              <div class="detail-label">Suspendues</div>
-            </div>
-          </div>
-          <div class="detail-card">
-            <div class="detail-icon"><span class="material-symbols-outlined">photo_camera</span></div>
-            <div class="detail-content">
-              <div class="detail-value">{{ adhesionsStats.avec_photo || 0 }}</div>
-              <div class="detail-label">Avec photo</div>
-            </div>
-          </div>
-          <div class="detail-card">
-            <div class="detail-icon"><span class="material-symbols-outlined">badge</span></div>
-            <div class="detail-content">
-              <div class="detail-value">{{ adhesionsStats.avec_carte || 0 }}</div>
-              <div class="detail-label">Avec carte</div>
-            </div>
-          </div>
-          <div class="detail-card">
-            <div class="detail-icon"><span class="material-symbols-outlined">payments</span></div>
-            <div class="detail-content">
-              <div class="detail-value">{{ formatAmount(adhesionsStats.total_montant || 0) }} €</div>
-              <div class="detail-label">Montant total</div>
             </div>
           </div>
         </div>
@@ -271,9 +224,10 @@ const currentMenu = ref<any>(null);
 const benevolesStats = ref<any>({});
 const recentDons = ref<any[]>([]);
 const pieChartCanvas = ref<HTMLCanvasElement | null>(null);
-const lineChartCanvas = ref<HTMLCanvasElement | null>(null);
+const caChartCanvas = ref<HTMLCanvasElement | null>(null);
 let pieChart: Chart | null = null;
-let lineChart: Chart | null = null;
+let caChart: Chart | null = null;
+const caEvolutionData = ref<any[]>([]);
 
 // Computed properties
 const totalRevenue = computed(() => {
@@ -423,7 +377,7 @@ function updatePieChart() {
             padding: 15,
             font: {
               size: 13,
-              weight: '500',
+              weight: 500,
             },
             generateLabels: (chart: any) => {
               const chartData = chart.data;
@@ -463,54 +417,110 @@ function updatePieChart() {
   });
 }
 
-function updateLineChart() {
-  if (!lineChartCanvas.value || !adhesionsStats.value.par_mois) return;
+async function loadAdhesionsStats() {
+  try {
+    const response = await adhesionsApi.stats(selectedYear.value);
+    const data = response.data.data || response.data || {};
+    adhesionsStats.value = data;
+  } catch (err: any) {
+    console.error('Erreur chargement stats adhésions:', err);
+    adhesionsStats.value = {};
+  }
+}
 
-  const monthlyData = adhesionsStats.value.par_mois || [];
-  const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
-  const labels: string[] = [];
-  const data: number[] = [];
+async function loadCAEvolution() {
+  try {
+    const response = await comptabiliteApi.evolutionCAAnnee();
+    const data = response.data.data || response.data || [];
+    caEvolutionData.value = data;
+    
+    await nextTick();
+    setTimeout(() => {
+      updateCAChart();
+    }, 100);
+  } catch (err: any) {
+    console.error('Erreur chargement évolution CA:', err);
+    caEvolutionData.value = [];
+  }
+}
 
-  for (let i = 1; i <= 12; i++) {
-    labels.push(months[i - 1]);
-    const monthData = monthlyData.find((m: any) => m.mois === i);
-    data.push(monthData ? monthData.count : 0);
+function updateCAChart() {
+  if (!caChartCanvas.value || !caEvolutionData.value || caEvolutionData.value.length === 0) return;
+
+  const labels = caEvolutionData.value.map((item: any) => item.annee.toString());
+  const totalData = caEvolutionData.value.map((item: any) => item.total || 0);
+  const adhesionsData = caEvolutionData.value.map((item: any) => item.adhesions || 0);
+  const donsData = caEvolutionData.value.map((item: any) => item.dons || 0);
+  const creditsData = caEvolutionData.value.map((item: any) => item.credits || 0);
+
+  if (caChart) {
+    caChart.destroy();
   }
 
-  if (lineChart) {
-    lineChart.destroy();
-  }
-
-  lineChart = new Chart(lineChartCanvas.value, {
-    type: 'line',
+  caChart = new Chart(caChartCanvas.value, {
+    type: 'bar',
     data: {
       labels,
-      datasets: [{
-        label: 'Nombre d\'adhésions',
-        data,
-        borderColor: '#667eea',
-        backgroundColor: 'rgba(102, 126, 234, 0.1)',
-        borderWidth: 3,
-        fill: true,
-        tension: 0.4,
-        pointRadius: 5,
-        pointHoverRadius: 7,
-        pointBackgroundColor: '#667eea',
-        pointBorderColor: '#fff',
-        pointBorderWidth: 2,
-      }],
+      datasets: [
+        {
+          label: 'Adhésions',
+          data: adhesionsData,
+          backgroundColor: 'rgba(102, 126, 234, 0.7)',
+          borderColor: '#667eea',
+          borderWidth: 2,
+        },
+        {
+          label: 'Dons',
+          data: donsData,
+          backgroundColor: 'rgba(236, 72, 153, 0.7)',
+          borderColor: '#ec4899',
+          borderWidth: 2,
+        },
+        {
+          label: 'Crédits manuels',
+          data: creditsData,
+          backgroundColor: 'rgba(34, 197, 94, 0.7)',
+          borderColor: '#22c55e',
+          borderWidth: 2,
+        },
+        {
+          label: 'Total CA',
+          data: totalData,
+          type: 'line',
+          borderColor: '#f59e0b',
+          backgroundColor: 'rgba(245, 158, 11, 0.1)',
+          borderWidth: 3,
+          fill: false,
+          tension: 0.4,
+          pointRadius: 6,
+          pointHoverRadius: 8,
+          pointBackgroundColor: '#f59e0b',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+        },
+      ],
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
         legend: {
-          display: false,
+          display: true,
+          position: 'top',
+          labels: {
+            padding: 15,
+            font: {
+              size: 13,
+              weight: 500,
+            },
+          },
         },
         tooltip: {
           callbacks: {
             label: (context: any) => {
-              return `${context.parsed.y} adhésion(s)`;
+              const label = context.dataset.label || '';
+              const value = context.parsed.y || 0;
+              return `${label}: ${formatAmount(value)} €`;
             },
           },
         },
@@ -519,28 +529,14 @@ function updateLineChart() {
         y: {
           beginAtZero: true,
           ticks: {
-            stepSize: 1,
+            callback: (value: any) => {
+              return `${formatAmount(value)} €`;
+            },
           },
         },
       },
     },
   });
-}
-
-async function loadAdhesionsStats() {
-  try {
-    const response = await adhesionsApi.stats(selectedYear.value);
-    const data = response.data.data || response.data || {};
-    adhesionsStats.value = data;
-    
-    await nextTick();
-    setTimeout(() => {
-      updateLineChart();
-    }, 100);
-  } catch (err: any) {
-    console.error('Erreur chargement stats adhésions:', err);
-    adhesionsStats.value = {};
-  }
 }
 
 async function loadAdhesionsNeedCartes() {
@@ -602,6 +598,7 @@ async function loadDashboardData() {
       loadCurrentMenu(),
       loadBenevolesStats(),
       loadRecentDons(),
+      loadCAEvolution(),
     ]);
   } catch (err: any) {
     console.error('Erreur chargement dashboard:', err);
@@ -619,20 +616,31 @@ onMounted(async () => {
     if (Object.keys(paiementsData.value).length > 0) {
       updatePieChart();
     }
-    if (adhesionsStats.value.par_mois) {
-      updateLineChart();
+    if (caEvolutionData.value.length > 0) {
+      updateCAChart();
     }
   }, 200);
 });
 
+let isYearLoading = false;
+
 watch(selectedYear, async () => {
-  await loadPaiementsData();
-  await loadAdhesionsStats();
-  await nextTick();
-  setTimeout(() => {
-    updatePieChart();
-    updateLineChart();
-  }, 100);
+  if (isYearLoading) {
+    console.log('⏳ Chargement année déjà en cours');
+    return;
+  }
+  
+  isYearLoading = true;
+  try {
+    await loadPaiementsData();
+    await loadAdhesionsStats();
+    await nextTick();
+    setTimeout(() => {
+      updatePieChart();
+    }, 100);
+  } finally {
+    isYearLoading = false;
+  }
 });
 </script>
 
@@ -812,6 +820,10 @@ watch(selectedYear, async () => {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
+.chart-card.full-width {
+  grid-column: 1 / -1;
+}
+
 .chart-header {
   display: flex;
   justify-content: space-between;
@@ -918,48 +930,6 @@ watch(selectedYear, async () => {
   border-radius: 20px;
   font-size: 12px;
   font-weight: bold;
-}
-
-/* Statistiques détaillées des adhésions */
-.adhesions-detail {
-  margin-top: 10px;
-}
-
-.adhesions-detail-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 15px;
-}
-
-.detail-card {
-  background: #f8f9fa;
-  border-radius: 12px;
-  padding: 20px;
-  text-align: center;
-  border-left: 4px solid #667eea;
-}
-
-.detail-icon {
-  font-size: 30px;
-  margin-bottom: 10px;
-}
-
-.detail-icon .material-symbols-outlined {
-  font-size: 30px;
-  width: 30px;
-  height: 30px;
-}
-
-.detail-value {
-  font-size: 28px;
-  font-weight: bold;
-  color: #667eea;
-  margin-bottom: 5px;
-}
-
-.detail-label {
-  font-size: 12px;
-  color: #7f8c8d;
 }
 
 /* Grille d'informations */

@@ -149,7 +149,7 @@ const notFoundRoute = {
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [...publicRoutes, ...appRoutes, notFoundRoute],
-  scrollBehavior(to, from, savedPosition) {
+  scrollBehavior(_to, _from, savedPosition) {
     if (savedPosition) {
       return savedPosition;
     } else {
@@ -159,7 +159,7 @@ const router = createRouter({
 });
 
 // Navigation guard - SIMPLIFIÉ SANS AUTHENTIFICATION
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, _from, next) => {
   // Mettre à jour le titre de la page
   document.title = to.meta.title 
     ? `${to.meta.title} - IGCA Paris` 

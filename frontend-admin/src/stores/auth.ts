@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import { authApi } from '@/services/api';
+// import { authApi } from '@/services/api'; // Désactivé pour l'instant
 import type { User } from '@/types/auth';
 
 export const useAuthStore = defineStore('auth', () => {
@@ -23,7 +23,7 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading.value = false;
   }
 
-  async function login(email: string, password: string) {
+  async function login(_email: string, _password: string) {
     // AUTHENTIFICATION DÉSACTIVÉE - Toujours réussir
     return true;
   }
