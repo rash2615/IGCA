@@ -336,13 +336,13 @@ onMounted(() => {
 <style scoped>
 .don-detail {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   padding: 24px;
 }
 
 .detail-container {
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
+  margin: 0;
 }
 
 .page-header {
@@ -474,7 +474,7 @@ onMounted(() => {
 .amount-value-large {
   font-size: 48px;
   font-weight: 700;
-  color: #667eea;
+  color: var(--primary);
   line-height: 1;
 }
 
@@ -543,7 +543,7 @@ onMounted(() => {
 }
 
 .detail-item a {
-  color: #667eea;
+  color: var(--primary);
   text-decoration: none;
 }
 
@@ -574,7 +574,7 @@ onMounted(() => {
 }
 
 .card-header-info .material-symbols-outlined {
-  color: #667eea;
+  color: var(--primary);
   font-size: 24px;
 }
 
@@ -618,11 +618,11 @@ onMounted(() => {
 .info-value.highlight {
   font-size: 18px;
   font-weight: 700;
-  color: #667eea;
+  color: var(--primary);
 }
 
 .info-value a {
-  color: #667eea;
+  color: var(--primary);
   text-decoration: none;
 }
 
@@ -729,7 +729,7 @@ onMounted(() => {
 .form-group input:focus,
 .form-group select:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: var(--primary);
 }
 
 .modal-actions {
@@ -741,43 +741,6 @@ onMounted(() => {
   border-top: 1px solid #e2e8f0;
 }
 
-.btn-primary {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-primary:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-}
-
-.btn-primary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 24px;
-  background: #f1f5f9;
-  color: #475569;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-}
+/* Boutons styles maintenant dans buttons.css global */
 </style>
 

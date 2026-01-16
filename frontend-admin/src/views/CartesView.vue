@@ -113,7 +113,7 @@
         </div>
         <div class="stat-card">
           <div class="stat-icon" style="background: #dbeafe;">
-            <span class="material-symbols-outlined" style="color: #2563eb;">inventory_2</span>
+            <span class="material-symbols-outlined" style="color: var(--primary-dark);">inventory_2</span>
           </div>
           <div class="stat-info">
             <div class="stat-value">{{ stats.nonRecuperee }}</div>
@@ -609,7 +609,7 @@ onMounted(() => {
 
 .title-group .material-symbols-outlined {
   font-size: 32px;
-  color: #3b82f6;
+  color: var(--primary);
 }
 
 .subtitle {
@@ -618,26 +618,7 @@ onMounted(() => {
   font-size: 14px;
 }
 
-.btn-primary {
-  padding: 12px 24px;
-  background: #3b82f6;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 16px;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.2s;
-}
-
-.btn-primary:hover {
-  background: #2563eb;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-}
+/* Boutons styles maintenant dans buttons.css global */
 
 /* Search Section */
 .search-section {
@@ -677,7 +658,7 @@ onMounted(() => {
 
 .search-input:focus {
   outline: none;
-  border-color: #3b82f6;
+  border-color: var(--primary);
 }
 
 .btn-search {
@@ -901,7 +882,7 @@ onMounted(() => {
 
 .badge-non_recuperee {
   background: #dbeafe;
-  color: #2563eb;
+  color: var(--primary-dark);
 }
 
 .badge-delivree {
@@ -1075,7 +1056,7 @@ onMounted(() => {
 
 .form-input:focus {
   outline: none;
-  border-color: #3b82f6;
+  border-color: var(--primary);
 }
 
 .modal-actions {
@@ -1174,7 +1155,7 @@ onMounted(() => {
 
 .adherent-item.selected {
   background: #eff6ff;
-  border-left: 3px solid #3b82f6;
+  border-left: 3px solid var(--primary);
 }
 
 .adherent-photo {
@@ -1232,7 +1213,7 @@ onMounted(() => {
 }
 
 .selected-icon {
-  color: #3b82f6;
+  color: var(--primary);
   font-size: 24px;
 }
 
@@ -1241,7 +1222,7 @@ onMounted(() => {
   margin-top: 20px;
   padding: 16px;
   background: #eff6ff;
-  border: 2px solid #3b82f6;
+  border: 2px solid var(--primary);
   border-radius: 8px;
 }
 
@@ -1250,7 +1231,7 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   margin-bottom: 12px;
-  color: #3b82f6;
+  color: var(--primary);
   font-weight: 600;
 }
 

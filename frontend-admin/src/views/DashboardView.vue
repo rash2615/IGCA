@@ -466,7 +466,7 @@ function updateCAChart() {
           label: 'Adhésions',
           data: adhesionsData,
           backgroundColor: 'rgba(102, 126, 234, 0.7)',
-          borderColor: '#667eea',
+          borderColor: 'var(--primary)',
           borderWidth: 2,
         },
         {
@@ -647,7 +647,7 @@ watch(selectedYear, async () => {
 <style scoped>
 .dashboard {
   width: 100%;
-  padding: 0;
+  padding: var(--spacing-xl);
 }
 
 .dashboard-header {
@@ -684,7 +684,7 @@ watch(selectedYear, async () => {
 
 .btn-refresh {
   padding: 8px 15px;
-  background-color: #667eea;
+  background-color: var(--primary);
   color: white;
   border: none;
   border-radius: 5px;
@@ -694,7 +694,7 @@ watch(selectedYear, async () => {
 }
 
 .btn-refresh:hover:not(:disabled) {
-  background-color: #5568d3;
+  background-color: var(--primary-dark);
 }
 
 .btn-refresh:disabled {
@@ -715,7 +715,7 @@ watch(selectedYear, async () => {
   width: 50px;
   height: 50px;
   border: 4px solid #f3f3f3;
-  border-top: 4px solid #667eea;
+  border-top: 4px solid var(--primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -728,36 +728,36 @@ watch(selectedYear, async () => {
 .dashboard-content {
   display: flex;
   flex-direction: column;
-  gap: 25px;
+  gap: var(--spacing-lg);
 }
 
 /* Vue d'ensemble - Statistiques principales */
 .overview-section {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
-  margin-bottom: 10px;
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
 }
 
 .stat-card-large {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 15px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  border-radius: var(--radius-xl);
   padding: 25px;
-  color: white;
+  color: var(--text-inverse);
   display: flex;
   align-items: center;
   gap: 20px;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-  transition: transform 0.3s, box-shadow 0.3s;
+  box-shadow: var(--shadow-orange);
+  transition: transform var(--transition-slow), box-shadow var(--transition-slow);
 }
 
 .stat-card-large:hover {
   transform: translateY(-5px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  box-shadow: var(--shadow-lg);
 }
 
 .stat-card-large.total-revenue {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
 }
 
 .stat-card-large.total-adhesions {
@@ -810,7 +810,7 @@ watch(selectedYear, async () => {
 .charts-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: 25px;
+  gap: var(--spacing-lg);
 }
 
 .chart-card {
@@ -925,7 +925,7 @@ watch(selectedYear, async () => {
   top: 10px;
   right: 10px;
   background: rgba(102, 126, 234, 0.2);
-  color: #667eea;
+  color: var(--primary);
   padding: 5px 10px;
   border-radius: 20px;
   font-size: 12px;
@@ -936,7 +936,7 @@ watch(selectedYear, async () => {
 .info-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 25px;
+  gap: var(--spacing-lg);
 }
 
 .info-card {
@@ -960,7 +960,7 @@ watch(selectedYear, async () => {
 }
 
 .badge {
-  background: #667eea;
+  background: var(--primary);
   color: white;
   padding: 4px 12px;
   border-radius: 20px;
@@ -981,7 +981,7 @@ watch(selectedYear, async () => {
   padding: 12px;
   background: #f8f9fa;
   border-radius: 8px;
-  border-left: 3px solid #667eea;
+  border-left: 3px solid var(--primary);
 }
 
 .item-info {
@@ -1002,23 +1002,23 @@ watch(selectedYear, async () => {
 
 .btn-small {
   padding: 6px 12px;
-  background-color: #667eea;
-  color: white;
+  background-color: var(--primary);
+  color: var(--text-inverse);
   border: none;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 12px;
-  transition: background-color 0.3s;
+  font-size: var(--font-size-xs);
+  transition: all var(--transition-base);
 }
 
 .btn-small:hover {
-  background-color: #5568d3;
+  background-color: var(--primary-dark);
 }
 
 .more-items {
   text-align: center;
   padding: 10px;
-  color: #667eea;
+  color: var(--primary);
   font-size: 12px;
   font-weight: 500;
 }
@@ -1031,7 +1031,7 @@ watch(selectedYear, async () => {
 
 .menu-date {
   font-weight: 600;
-  color: #667eea;
+  color: var(--primary);
   margin-bottom: 10px;
 }
 
@@ -1075,7 +1075,7 @@ watch(selectedYear, async () => {
 .stat-number {
   font-size: 32px;
   font-weight: bold;
-  color: #667eea;
+  color: var(--primary);
   margin-bottom: 5px;
 }
 
@@ -1125,7 +1125,7 @@ watch(selectedYear, async () => {
 .retry-btn {
   margin-top: 15px;
   padding: 10px 20px;
-  background-color: #667eea;
+  background-color: var(--primary);
   color: white;
   border: none;
   border-radius: 5px;

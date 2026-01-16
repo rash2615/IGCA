@@ -26,7 +26,7 @@ const authStore = useAuthStore();
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   color: white;
   text-align: center;
 }
@@ -56,7 +56,7 @@ const authStore = useAuthStore();
 
 .actions {
   display: flex;
-  gap: 20px;
+  gap: var(--spacing-lg);
   justify-content: center;
   flex-wrap: wrap;
 }

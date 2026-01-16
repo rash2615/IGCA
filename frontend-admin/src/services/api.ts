@@ -425,6 +425,7 @@ export const rolesApi = {
 
 export const usersApi = {
   list: (params?: any) => api.get('/users', { params }),
+  create: (data: any) => api.post('/users', data),
   desactivate: (userId: number) => api.patch(`/users/${userId}/desactivate`),
   activate: (userId: number) => api.patch(`/users/${userId}/activate`),
   updateRole: (userId: number, role: string) => api.patch(`/users/${userId}/role`, { role }),

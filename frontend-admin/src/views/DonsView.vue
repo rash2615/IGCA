@@ -22,7 +22,7 @@
     <!-- Statistiques -->
     <div class="stats-section">
       <div class="stat-card">
-        <div class="stat-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <div class="stat-icon" style="background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);">
           <span class="material-symbols-outlined">favorite</span>
         </div>
         <div class="stat-content">
@@ -601,8 +601,8 @@ onMounted(() => {
 <style scoped>
 .dons-modern {
   padding: 24px;
-  max-width: 1400px;
-  margin: 0 auto;
+  width: 100%;
+  margin: 0;
 }
 
 .page-header {
@@ -630,82 +630,7 @@ onMounted(() => {
   align-items: center;
 }
 
-.btn-primary {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-}
-
-.btn-secondary {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 24px;
-  background: #f1f5f9;
-  color: #475569;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.btn-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  cursor: pointer;
-  color: #64748b;
-  transition: all 0.2s;
-}
-
-.btn-icon:hover {
-  background: #f1f5f9;
-  color: #475569;
-}
-
-.btn-icon-small {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: transparent;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  color: #64748b;
-  transition: all 0.2s;
-}
-
-.btn-icon-small:hover {
-  background: #f1f5f9;
-  color: #475569;
-}
-
-.btn-icon-small.danger:hover {
-  background: #fee2e2;
-  color: #dc2626;
-}
+/* Boutons styles maintenant dans buttons.css global */
 
 .stats-section {
   display: grid;
@@ -791,7 +716,7 @@ onMounted(() => {
 
 .search-input:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
@@ -832,13 +757,13 @@ onMounted(() => {
 
 .btn-filters:hover,
 .btn-filters.active {
-  border-color: #667eea;
-  color: #667eea;
+  border-color: var(--primary);
+  color: var(--primary);
   background: #f8fafc;
 }
 
 .filter-badge {
-  background: #667eea;
+  background: var(--primary);
   color: white;
   border-radius: 12px;
   padding: 2px 8px;
@@ -884,7 +809,7 @@ onMounted(() => {
 .filter-group input:focus,
 .filter-group select:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: var(--primary);
 }
 
 .filter-chips {
@@ -914,8 +839,8 @@ onMounted(() => {
 }
 
 .chip.active {
-  background: #667eea;
-  border-color: #667eea;
+  background: var(--primary);
+  border-color: var(--primary);
   color: white;
 }
 
@@ -995,7 +920,7 @@ onMounted(() => {
 .amount-value {
   font-size: 28px;
   font-weight: 700;
-  color: #667eea;
+  color: var(--primary);
   line-height: 1;
 }
 
@@ -1169,7 +1094,7 @@ onMounted(() => {
 .form-group input:focus,
 .form-group select:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: var(--primary);
 }
 
 .modal-actions {

@@ -1,0 +1,363 @@
+/* ===== BOUTONS - Charte UI/UX IGCA Paris ===== */
+/* Styles uniformes pour tous les boutons et CTA */
+
+/* ===== BOUTONS PRINCIPAUX ===== */
+.btn-primary,
+.action-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: 12px 24px;
+  background: var(--primary);
+  color: var(--text-inverse);
+  border: none;
+  border-radius: var(--radius-lg);
+  font-family: var(--font-accent);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  box-shadow: var(--shadow-sm);
+  text-decoration: none;
+  outline: none;
+}
+
+.btn-primary:hover:not(:disabled),
+.action-btn-primary:hover:not(:disabled) {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-orange);
+}
+
+.btn-primary:active:not(:disabled),
+.action-btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-primary:disabled,
+.action-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ===== BOUTONS SECONDAIRES ===== */
+.btn-secondary,
+.action-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: 12px 24px;
+  background: transparent;
+  color: var(--primary);
+  border: 2px solid var(--primary);
+  border-radius: var(--radius-lg);
+  font-family: var(--font-accent);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  text-decoration: none;
+  outline: none;
+}
+
+.btn-secondary:hover:not(:disabled),
+.action-btn-secondary:hover:not(:disabled) {
+  background: var(--primary-pastel);
+  border-color: var(--primary-dark);
+  color: var(--primary-dark);
+}
+
+.btn-secondary:disabled,
+.action-btn-secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ===== BOUTONS TERTIAIRES ===== */
+.btn-tertiary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: 12px 24px;
+  background: transparent;
+  color: var(--secondary);
+  border: none;
+  border-radius: var(--radius-lg);
+  font-family: var(--font-accent);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  text-decoration: none;
+  outline: none;
+}
+
+.btn-tertiary:hover:not(:disabled) {
+  background: var(--beige-light);
+  color: var(--text-primary);
+}
+
+/* ===== BOUTONS ICÔNES ===== */
+.btn-icon,
+.action-btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: var(--bg-secondary);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  outline: none;
+  padding: 0;
+}
+
+.btn-icon:hover:not(:disabled),
+.action-btn-icon:hover:not(:disabled) {
+  background: var(--beige-light);
+  border-color: var(--primary);
+  color: var(--primary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-icon:disabled,
+.action-btn-icon:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ===== BOUTONS ICÔNES PETITS ===== */
+.btn-icon-small,
+.action-btn-small {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  outline: none;
+  padding: 0;
+}
+
+.btn-icon-small:hover:not(:disabled),
+.action-btn-small:hover:not(:disabled) {
+  background: var(--beige-light);
+  color: var(--text-primary);
+}
+
+.btn-icon-small.success,
+.action-btn-small.success {
+  color: var(--success);
+}
+
+.btn-icon-small.success:hover:not(:disabled),
+.action-btn-small.success:hover:not(:disabled) {
+  background: var(--success-light);
+  color: var(--success);
+}
+
+.btn-icon-small.warning,
+.action-btn-small.warning {
+  color: var(--warning);
+}
+
+.btn-icon-small.warning:hover:not(:disabled),
+.action-btn-small.warning:hover:not(:disabled) {
+  background: var(--warning-light);
+  color: var(--warning);
+}
+
+.btn-icon-small.danger,
+.action-btn-small.danger {
+  color: var(--danger);
+}
+
+.btn-icon-small.danger:hover:not(:disabled),
+.action-btn-small.danger:hover:not(:disabled) {
+  background: var(--danger-light);
+  color: var(--danger);
+}
+
+/* ===== BOUTONS SUCCÈS ===== */
+.btn-success {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: 12px 24px;
+  background: var(--success);
+  color: var(--text-inverse);
+  border: none;
+  border-radius: var(--radius-lg);
+  font-family: var(--font-accent);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  box-shadow: var(--shadow-sm);
+  text-decoration: none;
+  outline: none;
+}
+
+.btn-success:hover:not(:disabled) {
+  background: #059669;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+/* ===== BOUTONS DANGER ===== */
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: 12px 24px;
+  background: var(--danger);
+  color: var(--text-inverse);
+  border: none;
+  border-radius: var(--radius-lg);
+  font-family: var(--font-accent);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  box-shadow: var(--shadow-sm);
+  text-decoration: none;
+  outline: none;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #DC2626;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+/* ===== BOUTONS AVEC ICÔNES ===== */
+.btn-primary .material-symbols-outlined,
+.btn-secondary .material-symbols-outlined,
+.btn-tertiary .material-symbols-outlined,
+.btn-success .material-symbols-outlined,
+.btn-danger .material-symbols-outlined,
+.action-btn-primary .material-symbols-outlined {
+  font-size: 20px;
+}
+
+.btn-text {
+  display: inline-block;
+  white-space: nowrap;
+  line-height: 1.5;
+}
+
+/* ===== BOUTONS DE FILTRES ===== */
+.btn-filters {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 10px 16px;
+  background: var(--bg-secondary);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-family: var(--font-accent);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  outline: none;
+}
+
+.btn-filters:hover {
+  background: var(--beige-light);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.btn-filters.active {
+  background: var(--primary-pastel);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* ===== CHIPS / BADGES CLICABLES ===== */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: 6px 12px;
+  background: var(--bg-secondary);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  outline: none;
+}
+
+.chip:hover {
+  background: var(--beige-light);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.chip.active {
+  background: var(--primary-pastel);
+  border-color: var(--primary);
+  color: var(--primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* ===== BOUTONS DANS MODALS ===== */
+.modal-footer .btn-primary,
+.modal-footer .btn-secondary {
+  min-width: 120px;
+}
+
+/* ===== ANIMATION SPIN ===== */
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 640px) {
+  .btn-primary,
+  .btn-secondary,
+  .action-btn-primary {
+    padding: 10px 20px;
+    font-size: var(--font-size-sm);
+  }
+  
+  .btn-text {
+    display: none;
+  }
+  
+  .action-btn-primary {
+    padding: 10px;
+  }
+}
+

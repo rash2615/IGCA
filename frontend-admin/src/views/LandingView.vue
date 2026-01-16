@@ -153,7 +153,7 @@
 <style scoped>
 .landing {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
 }
 
 /* Hero Section */
@@ -163,8 +163,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 80px 5%;
-  max-width: 1400px;
-  margin: 0 auto;
+  width: 100%;
+  margin: 0;
   color: white;
 }
 
@@ -218,24 +218,24 @@
 }
 
 .btn-primary {
-  background: white;
-  color: #667eea;
+  background: var(--text-inverse);
+  color: var(--primary);
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 10px 25px rgba(255, 107, 53, 0.3);
 }
 
 .btn-secondary {
   background: transparent;
-  color: white;
-  border-color: white;
+  color: var(--text-inverse);
+  border-color: var(--text-inverse);
 }
 
 .btn-secondary:hover {
-  background: white;
-  color: #667eea;
+  background: var(--text-inverse);
+  color: var(--primary);
 }
 
 .btn-large {
@@ -434,7 +434,7 @@
   font-size: 56px;
   font-weight: 800;
   margin-bottom: 10px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -448,7 +448,7 @@
 /* CTA Section */
 .cta {
   padding: 100px 5%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   text-align: center;
   color: white;
 }

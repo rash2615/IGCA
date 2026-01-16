@@ -4,6 +4,8 @@ import App from './App.vue';
 import router from './router';
 import './assets/main.css';
 import './styles/design-system.css';
+import './styles/buttons.css';
+import './styles/grids-spacing.css';
 
 const app = createApp(App);
 

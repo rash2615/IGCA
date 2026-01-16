@@ -513,7 +513,7 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 50%, #f093fb 100%);
   z-index: 0;
   opacity: 0.1;
 }
@@ -521,8 +521,8 @@ onMounted(() => {
 .detail-container {
   position: relative;
   z-index: 1;
-  max-width: 1400px;
-  margin: 0 auto;
+  width: 100%;
+  margin: 0;
 }
 
 /* Glassmorphism effect */
@@ -583,7 +583,7 @@ onMounted(() => {
   margin: 0;
   font-size: 28px;
   font-weight: 700;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -611,7 +611,7 @@ onMounted(() => {
   border: 1px solid rgba(255, 255, 255, 0.3);
   background: rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(10px);
-  color: #667eea;
+  color: var(--primary);
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -623,13 +623,14 @@ onMounted(() => {
 }
 
 .btn-action-glass.btn-primary-glass {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: var(--primary);
+  color: var(--text-inverse);
   border: none;
 }
 
 .btn-action-glass.btn-primary-glass:hover {
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  background: var(--primary-dark);
+  box-shadow: var(--shadow-orange);
 }
 
 .btn-action-glass.btn-danger-glass {
@@ -654,7 +655,7 @@ onMounted(() => {
   width: 50px;
   height: 50px;
   border: 4px solid rgba(255, 255, 255, 0.3);
-  border-top: 4px solid #667eea;
+  border-top: 4px solid var(--primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -701,7 +702,7 @@ onMounted(() => {
   width: 70px;
   height: 70px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -717,7 +718,7 @@ onMounted(() => {
   margin: 0;
   font-size: 28px;
   font-weight: 700;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -853,7 +854,7 @@ onMounted(() => {
   font-size: 36px;
   font-weight: 700;
   margin: 0 0 15px 0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -871,7 +872,7 @@ onMounted(() => {
   border: 1px solid rgba(102, 126, 234, 0.2);
   font-size: 14px;
   font-weight: 600;
-  color: #667eea;
+  color: var(--primary);
 }
 
 .details-grid-glass {
@@ -901,7 +902,7 @@ onMounted(() => {
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -945,13 +946,13 @@ onMounted(() => {
 }
 
 .detail-value a {
-  color: #667eea;
+  color: var(--primary);
   text-decoration: none;
   transition: all 0.2s;
 }
 
 .detail-value a:hover {
-  color: #764ba2;
+  color: var(--primary-dark);
   text-decoration: underline;
 }
 
@@ -990,14 +991,14 @@ onMounted(() => {
   margin: 0;
   font-size: 24px;
   font-weight: 700;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .section-title-glass .material-symbols-outlined {
-  color: #667eea;
+  color: var(--primary);
 }
 
 .documents-grid-glass {
@@ -1027,7 +1028,7 @@ onMounted(() => {
 
 .document-icon-gradient {
   font-size: 40px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -1096,7 +1097,7 @@ onMounted(() => {
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
-  color: #667eea;
+  color: var(--primary);
   transition: all 0.2s;
 }
 
@@ -1107,13 +1108,14 @@ onMounted(() => {
 }
 
 .btn-download-glass.btn-primary-gradient {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: var(--primary);
+  color: var(--text-inverse);
   border: none;
 }
 
 .btn-download-glass.btn-primary-gradient:hover {
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  background: var(--primary-dark);
+  box-shadow: var(--shadow-orange);
 }
 
 .btn-download-glass .material-symbols-outlined {
@@ -1142,7 +1144,7 @@ onMounted(() => {
 
 .info-icon-gradient {
   font-size: 28px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -1191,7 +1193,7 @@ onMounted(() => {
   border-radius: 8px;
   font-family: 'Courier New', monospace;
   font-size: 12px;
-  color: #667eea;
+  color: var(--primary);
   border: 1px solid rgba(102, 126, 234, 0.2);
 }
 

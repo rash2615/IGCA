@@ -42,11 +42,7 @@
           title="Ajouter une nouvelle adhésion"
         >
           <span class="material-symbols-outlined">add</span>
-          <span class="btn-text">
-            <span class="btn-text-line">Ajouter</span>
-            <span class="btn-text-line">une</span>
-            <span class="btn-text-line">adhésion</span>
-          </span>
+          <span class="btn-text">Ajouter une adhésion</span>
         </button>
       </div>
     </div>
@@ -1898,8 +1894,7 @@ onMounted(async () => {
 <style scoped>
 .page-container {
   width: 100%;
-  max-width: 100%;
-  padding: 0;
+  padding: var(--spacing-xl);
   margin: 0;
   overflow-x: hidden;
 }
@@ -1947,7 +1942,7 @@ onMounted(async () => {
   border-radius: 10px;
   border: 1.5px solid #e5e7eb;
   background: white;
-  color: #667eea;
+  color: var(--primary);
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
@@ -1973,7 +1968,7 @@ onMounted(async () => {
 }
 
 .action-btn-icon:hover {
-  border-color: #667eea;
+  border-color: var(--primary);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
 }
@@ -2000,90 +1995,7 @@ onMounted(async () => {
   z-index: 1;
 }
 
-.action-btn-primary {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-  border-radius: 10px;
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.25);
-  position: relative;
-  overflow: hidden;
-}
-
-.action-btn-primary::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s;
-}
-
-.action-btn-primary:hover::before {
-  left: 100%;
-}
-
-.action-btn-primary:hover {
-  background: #5568d3;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-}
-
-.action-btn-primary:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.25);
-}
-
-.action-btn-primary .material-symbols-outlined {
-  font-size: 22px;
-  position: relative;
-  z-index: 1;
-}
-
-.btn-text {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  line-height: 1.2;
-  position: relative;
-  z-index: 1;
-}
-
-.btn-text-line {
-  display: block;
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.1px;
-  line-height: 1.3;
-}
-
-.btn-primary {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  background: #667eea;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-primary:hover {
-  background: #5568d3;
-}
+/* Boutons styles maintenant dans buttons.css global */
 
 /* Search bar */
 .search-bar {
@@ -2117,7 +2029,7 @@ onMounted(async () => {
 
 .search-input:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
@@ -2149,12 +2061,12 @@ onMounted(async () => {
 
 .btn-filters:hover,
 .btn-filters.active {
-  border-color: #667eea;
-  color: #667eea;
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 .filter-badge {
-  background: #667eea;
+  background: var(--primary);
   color: white;
   border-radius: 12px;
   padding: 2px 8px;
@@ -2176,7 +2088,7 @@ onMounted(async () => {
 .filters-content {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
+  gap: var(--spacing-lg);
 }
 
 .filter-group label {
@@ -2220,9 +2132,9 @@ onMounted(async () => {
 }
 
 .chip.active {
-  background: #667eea;
+  background: var(--primary);
   color: white;
-  border-color: #667eea;
+  border-color: var(--primary);
 }
 
 .chip .material-symbols-outlined {
@@ -2275,7 +2187,7 @@ onMounted(async () => {
 .stat-value {
   font-size: 24px;
   font-weight: 700;
-  color: #667eea;
+  color: var(--primary);
 }
 
 .stat-label {
@@ -2327,11 +2239,11 @@ onMounted(async () => {
   width: 18px;
   height: 18px;
   cursor: pointer;
-  accent-color: #667eea;
+  accent-color: var(--primary);
 }
 
 .toggle-all:hover {
-  color: #667eea;
+  color: var(--primary);
 }
 
 .bulk-actions {
@@ -2363,7 +2275,7 @@ onMounted(async () => {
 }
 
 .year-title .material-symbols-outlined {
-  color: #667eea;
+  color: var(--primary);
 }
 
 .year-count {
@@ -2376,7 +2288,7 @@ onMounted(async () => {
 .cards-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 20px;
+  gap: var(--spacing-lg);
 }
 
 .adhesion-card {
@@ -2395,7 +2307,7 @@ onMounted(async () => {
 }
 
 .adhesion-card.selected {
-  border-color: #667eea;
+  border-color: var(--primary);
   background: #f8f9ff;
 }
 
@@ -2505,7 +2417,7 @@ onMounted(async () => {
 
 .detail-item .material-symbols-outlined {
   font-size: 18px;
-  color: #667eea;
+  color: var(--primary);
 }
 
 .card-badges {
@@ -2587,14 +2499,14 @@ onMounted(async () => {
   border-radius: 6px;
   border: 1px solid #e0e0e0;
   background: white;
-  color: #667eea;
+  color: var(--primary);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .btn-action:hover {
   background: #f5f7fa;
-  border-color: #667eea;
+  border-color: var(--primary);
 }
 
 .btn-action.btn-danger {
@@ -2622,14 +2534,14 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   padding: 60px 20px;
-  gap: 20px;
+  gap: var(--spacing-lg);
 }
 
 .spinner {
   width: 40px;
   height: 40px;
   border: 4px solid #f3f3f3;
-  border-top: 4px solid #667eea;
+  border-top: 4px solid var(--primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -2654,7 +2566,7 @@ onMounted(async () => {
 }
 
 .file-input-large:hover {
-  border-color: #667eea;
+  border-color: var(--primary);
   background: #f3f4f6;
 }
 
@@ -2736,7 +2648,7 @@ onMounted(async () => {
 
 .pagination-btn:hover:not(:disabled) {
   background: #f5f7fa;
-  border-color: #667eea;
+  border-color: var(--primary);
 }
 
 .pagination-btn:disabled {
@@ -2767,7 +2679,7 @@ onMounted(async () => {
 }
 
 .table-modern thead {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   color: white;
 }
 
@@ -3363,8 +3275,8 @@ onMounted(async () => {
 
 .actions-btn:hover {
   background: #f9fafb;
-  border-color: #667eea;
-  color: #667eea;
+  border-color: var(--primary);
+  color: var(--primary);
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(102, 126, 234, 0.15);
 }
@@ -3484,7 +3396,7 @@ onMounted(async () => {
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
+  gap: var(--spacing-lg);
 }
 
 .form-group {

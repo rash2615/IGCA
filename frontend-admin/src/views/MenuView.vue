@@ -867,8 +867,8 @@ onMounted(async () => {
 <style scoped>
 .menu-view {
   padding: 24px;
-  max-width: 1400px;
-  margin: 0 auto;
+  width: 100%;
+  margin: 0;
 }
 
 /* Header */
@@ -895,7 +895,7 @@ onMounted(async () => {
 
 .header-title .material-symbols-outlined {
   font-size: 36px;
-  color: #667eea;
+  color: var(--primary);
 }
 
 .subtitle {
@@ -909,7 +909,7 @@ onMounted(async () => {
   align-items: center;
   gap: 8px;
   padding: 12px 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   color: white;
   border: none;
   border-radius: 12px;
@@ -958,12 +958,12 @@ onMounted(async () => {
 }
 
 .tab.active {
-  color: #667eea;
-  border-bottom-color: #667eea;
+  color: var(--primary);
+  border-bottom-color: var(--primary);
 }
 
 .tab .badge {
-  background: #667eea;
+  background: var(--primary);
   color: white;
   padding: 2px 8px;
   border-radius: 12px;
@@ -1054,7 +1054,7 @@ onMounted(async () => {
   align-items: center;
   gap: 8px;
   padding: 10px 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   color: white;
   border: none;
   border-radius: 10px;
@@ -1380,7 +1380,7 @@ onMounted(async () => {
 .menu-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
+  gap: var(--spacing-lg);
 }
 
 .menu-item-card {
@@ -1482,7 +1482,7 @@ onMounted(async () => {
 .price {
   font-size: 20px;
   font-weight: 700;
-  color: #667eea;
+  color: var(--primary);
 }
 
 .btn-remove {
@@ -1537,7 +1537,7 @@ onMounted(async () => {
 
 .search-box input:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: var(--primary);
 }
 
 .btn-clear {
@@ -1579,16 +1579,16 @@ onMounted(async () => {
 }
 
 .chip.active {
-  background: #667eea;
+  background: var(--primary);
   color: white;
-  border-color: #667eea;
+  border-color: var(--primary);
 }
 
 /* Plats grid */
 .plats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
+  gap: var(--spacing-lg);
 }
 
 .plat-card {
@@ -1717,7 +1717,7 @@ onMounted(async () => {
 .card-price {
   font-size: 20px;
   font-weight: 700;
-  color: #667eea;
+  color: var(--primary);
 }
 
 .switch {
@@ -1812,7 +1812,7 @@ onMounted(async () => {
 
 .loading-card .material-symbols-outlined {
   font-size: 48px;
-  color: #667eea;
+  color: var(--primary);
   animation: spin 1s linear infinite;
 }
 
@@ -1914,13 +1914,13 @@ onMounted(async () => {
 .form-input:focus,
 .form-textarea:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: var(--primary);
 }
 
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  gap: var(--spacing-lg);
 }
 
 .switch-large {
@@ -2010,7 +2010,7 @@ onMounted(async () => {
   align-items: center;
   gap: 8px;
   padding: 10px 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   color: white;
   border: none;
   border-radius: 8px;
@@ -2030,41 +2030,7 @@ onMounted(async () => {
   cursor: not-allowed;
 }
 
-.btn-primary {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-}
-
-.btn-secondary {
-  padding: 10px 20px;
-  background: #f1f5f9;
-  border: none;
-  border-radius: 8px;
-  color: #64748b;
-  font-size: 15px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-secondary:hover {
-  background: #e2e8f0;
-}
+/* Boutons styles maintenant dans buttons.css global */
 
 /* Selection grid */
 .plats-selection-grid {
@@ -2087,12 +2053,12 @@ onMounted(async () => {
 }
 
 .plat-select-card:hover {
-  border-color: #667eea;
+  border-color: var(--primary);
   transform: translateY(-2px);
 }
 
 .plat-select-card.selected {
-  border-color: #667eea;
+  border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
@@ -2148,7 +2114,7 @@ onMounted(async () => {
   margin: 0;
   font-size: 16px;
   font-weight: 700;
-  color: #667eea;
+  color: var(--primary);
 }
 
 .empty-plats {
