@@ -11,7 +11,7 @@
           <button @click="exportCsv" class="btn-icon" title="Exporter CSV">
             <span class="material-symbols-outlined">download</span>
           </button>
-          <button @click="openCreateModal" class="btn-primary">
+          <button v-if="permissions.canCreate" @click="openCreateModal" class="btn-primary">
             <span class="material-symbols-outlined">add</span>
             Nouveau don
           </button>
@@ -22,8 +22,8 @@
     <!-- Statistiques -->
     <div class="stats-section">
       <div class="stat-card">
-        <div class="stat-icon" style="background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);">
-          <span class="material-symbols-outlined">favorite</span>
+        <div class="stat-icon" style="background: var(--bg-secondary); border-color: var(--color-black);">
+          <span class="material-symbols-outlined" style="color: var(--color-black);">favorite</span>
         </div>
         <div class="stat-content">
           <div class="stat-label">Total dons</div>
@@ -31,8 +31,8 @@
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
-          <span class="material-symbols-outlined">euro</span>
+        <div class="stat-icon" style="background: var(--color-red-pastel); border-color: var(--color-red);">
+          <span class="material-symbols-outlined" style="color: var(--color-red);">euro</span>
         </div>
         <div class="stat-content">
           <div class="stat-label">Montant total</div>
@@ -40,8 +40,8 @@
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
-          <span class="material-symbols-outlined">trending_up</span>
+        <div class="stat-icon" style="background: var(--color-green-pastel); border-color: var(--color-green);">
+          <span class="material-symbols-outlined" style="color: var(--color-green);">trending_up</span>
         </div>
         <div class="stat-content">
           <div class="stat-label">Moyenne</div>
@@ -49,7 +49,7 @@
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+        <div class="stat-icon" style="background: var(--color-yellow-pastel); border-color: var(--color-yellow);">
           <span class="material-symbols-outlined">calendar_month</span>
         </div>
         <div class="stat-content">
@@ -151,10 +151,10 @@
               <button @click="viewDon(don.id)" class="btn-icon-small" title="Voir les détails">
                 <span class="material-symbols-outlined">visibility</span>
               </button>
-              <button @click="editDon(don)" class="btn-icon-small" title="Modifier">
+              <button v-if="permissions.canEdit" @click="editDon(don)" class="btn-icon-small" title="Modifier">
                 <span class="material-symbols-outlined">edit</span>
               </button>
-              <button @click="deleteDon(don.id, don.montant)" class="btn-icon-small danger" title="Supprimer">
+              <button v-if="permissions.canDelete" @click="deleteDon(don.id, don.montant)" class="btn-icon-small danger" title="Supprimer">
                 <span class="material-symbols-outlined">delete</span>
               </button>
             </div>
@@ -297,10 +297,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { Teleport } from 'vue';
 import { donsApi } from '@/services/api';
+import { usePermissions } from '@/composables/usePermissions';
+import { eventBus, EVENTS } from '@/utils/eventBus';
+
+const { permissions } = usePermissions();
 
 const router = useRouter();
 
@@ -509,9 +513,18 @@ async function saveDon() {
     if (editingDon.value) {
       await donsApi.update(editingDon.value.id, donForm.value);
       alert('Don modifié avec succès !');
+      
+      // Notifier les autres vues
+      eventBus.emit(EVENTS.DON_UPDATED, { id: editingDon.value.id });
     } else {
-      await donsApi.create(donForm.value);
+      const response = await donsApi.create(donForm.value);
+      const newDon = response.data?.data || response.data;
       alert('Don créé avec succès !');
+      
+      // Notifier les autres vues
+      if (newDon?.id) {
+        eventBus.emit(EVENTS.DON_CREATED, { id: newDon.id });
+      }
     }
     closeDonModal();
     await loadDons();
@@ -530,6 +543,9 @@ function deleteDon(id: number, montant: number) {
 
   donsApi.delete(id)
     .then(() => {
+      // Notifier les autres vues
+      eventBus.emit(EVENTS.DON_DELETED, { id });
+      
       alert('Don supprimé avec succès !');
       loadDons();
       loadStats();
@@ -617,12 +633,7 @@ onMounted(() => {
   gap: 16px;
 }
 
-.header-content h1 {
-  margin: 0;
-  font-size: 32px;
-  font-weight: 700;
-  color: #1e293b;
-}
+/* Header - styles maintenant dans view-base.css */
 
 .header-actions {
   display: flex;
@@ -763,12 +774,12 @@ onMounted(() => {
 }
 
 .filter-badge {
-  background: var(--primary);
-  color: white;
-  border-radius: 12px;
+  background: var(--color-black);
+  color: var(--text-inverse);
+  border-radius: 0;
   padding: 2px 8px;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
 }
 
 .filters-panel {
@@ -839,9 +850,9 @@ onMounted(() => {
 }
 
 .chip.active {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: white;
+  background: var(--color-black);
+  border-color: var(--color-black);
+  color: var(--text-inverse);
 }
 
 .chip .material-symbols-outlined {

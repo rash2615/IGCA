@@ -10,7 +10,7 @@
         <p class="subtitle">Gérez les cartes membres et vérifiez leur statut</p>
       </div>
       <div class="actions">
-        <button @click="openGenerateModal" class="btn-primary">
+        <button v-if="permissions.canCreate" @click="openGenerateModal" class="btn-primary">
           <span class="material-symbols-outlined">add</span>
           Générer une carte
         </button>
@@ -190,6 +190,7 @@
                     <span class="material-symbols-outlined">check</span>
                   </button>
                   <button 
+                    v-if="permissions.canDelete"
                     @click="deleteCarte(carte.id, carte.numero_carte)" 
                     class="btn-icon danger" 
                     title="Supprimer">
@@ -319,8 +320,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { cartesApi, verificationApi, adhesionsApi } from '@/services/api';
+import { usePermissions } from '@/composables/usePermissions';
+import { eventBus, EVENTS } from '@/utils/eventBus';
+
+const { permissions } = usePermissions();
 
 const cartes = ref<any[]>([]);
 const loading = ref(false);
@@ -511,6 +516,10 @@ async function generateCarte() {
   generating.value = true;
   try {
     await cartesApi.generate(newCarteAdhesionId.value);
+    
+    // Notifier les autres vues
+    eventBus.emit(EVENTS.CARTE_GENERATED, { adhesion_id: newCarteAdhesionId.value });
+    
     showGenerateModal.value = false;
     newCarteAdhesionId.value = null;
     selectedAdherent.value = null;
@@ -566,6 +575,10 @@ async function deleteCarte(id: number, numeroCarte: string) {
   
   try {
     await cartesApi.delete(id);
+    
+    // Notifier les autres vues
+    eventBus.emit(EVENTS.CARTE_DELETED, { id });
+    
     await loadCartes();
     alert('Carte supprimée avec succès !');
   } catch (error: any) {
@@ -573,49 +586,39 @@ async function deleteCarte(id: number, numeroCarte: string) {
   }
 }
 
+// Écouter les mises à jour d'adhésions pour recharger les cartes
+function handleAdhesionUpdated() {
+  console.log('🔄 Adhésion mise à jour, rechargement des cartes...');
+  loadCartes();
+}
+
 onMounted(() => {
   loadCartes();
+  // Écouter les événements de mise à jour d'adhésions
+  eventBus.on(EVENTS.ADHESION_UPDATED, handleAdhesionUpdated);
+});
+
+onUnmounted(() => {
+  // Nettoyer les listeners
+  eventBus.off(EVENTS.ADHESION_UPDATED, handleAdhesionUpdated);
 });
 </script>
 
 <style scoped>
 .cartes-view {
   width: 100%;
-  padding: 24px;
-  background: #f5f7fa;
+  padding: var(--spacing-xl);
+  background: var(--bg-page);
   min-height: 100vh;
 }
 
 /* Header */
-.header-section {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 32px;
-  background: white;
-  padding: 24px;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.title-group h1 {
-  margin: 0 0 8px 0;
-  font-size: 28px;
-  color: #1e293b;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.title-group .material-symbols-outlined {
-  font-size: 32px;
-  color: var(--primary);
-}
+/* Header - styles maintenant dans view-base.css */
 
 .subtitle {
   margin: 0;
-  color: #64748b;
-  font-size: 14px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
 }
 
 /* Boutons styles maintenant dans buttons.css global */
@@ -626,10 +629,11 @@ onMounted(() => {
 }
 
 .search-card {
-  background: white;
-  padding: 24px;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  background: var(--bg-primary);
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border);
+  padding: var(--spacing-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .search-card h2 {
@@ -663,16 +667,16 @@ onMounted(() => {
 
 .btn-search {
   padding: 12px 24px;
-  background: #10b981;
-  color: white;
+  background: var(--color-green);
+  color: var(--text-inverse);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  font-size: 16px;
+  font-size: var(--font-size-base);
   display: flex;
   align-items: center;
-  gap: 8px;
-  transition: all 0.2s;
+  gap: var(--spacing-sm);
+  transition: all var(--transition-base);
 }
 
 .btn-search:hover:not(:disabled) {
@@ -689,9 +693,12 @@ onMounted(() => {
 }
 
 .result-card {
-  padding: 20px;
-  border-radius: 8px;
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-md);
   border-left: 4px solid;
+  border-top: 1.5px solid var(--border);
+  border-right: 1.5px solid var(--border);
+  border-bottom: 1.5px solid var(--border);
 }
 
 .result-card.valid {
@@ -746,10 +753,11 @@ onMounted(() => {
 
 /* Cartes Section */
 .cartes-section {
-  background: white;
-  padding: 24px;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  background: var(--bg-primary);
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border);
+  padding: var(--spacing-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .section-header {

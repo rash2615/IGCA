@@ -26,8 +26,8 @@
     <!-- Statistiques -->
     <div class="stats-grid">
       <div class="stat-card">
-        <div class="stat-icon" style="background: #dbeafe; color: #3b82f6;">
-          <span class="material-symbols-outlined">groups</span>
+        <div class="stat-icon" style="background: var(--bg-secondary); border-color: var(--color-black);">
+          <span class="material-symbols-outlined" style="color: var(--color-black);">groups</span>
         </div>
         <div class="stat-content">
           <div class="stat-value">{{ stats.total_benevoles || 0 }}</div>
@@ -35,8 +35,8 @@
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon" style="background: #ede9fe; color: #8b5cf6;">
-          <span class="material-symbols-outlined">badge</span>
+        <div class="stat-icon" style="background: var(--bg-secondary); border-color: var(--color-black);">
+          <span class="material-symbols-outlined" style="color: var(--color-black);">badge</span>
         </div>
         <div class="stat-content">
           <div class="stat-value">{{ rolesFonctionnels.length }}</div>
@@ -44,7 +44,7 @@
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon" style="background: #d1fae5; color: #10b981;">
+        <div class="stat-icon" style="background: var(--color-green-pastel); border-color: var(--color-green);">
           <span class="material-symbols-outlined">check_circle</span>
         </div>
         <div class="stat-content">
@@ -473,19 +473,7 @@ onMounted(() => {
   margin: 0;
 }
 
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.page-header h1 {
-  font-size: 28px;
-  font-weight: 700;
-  color: #1f2937;
-  margin: 0;
-}
+/* Header - styles maintenant dans view-base.css */
 
 .header-actions {
   display: flex;
@@ -689,8 +677,8 @@ onMounted(() => {
 }
 
 .table-modern thead {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  color: white;
+  background: var(--color-black);
+  color: var(--text-inverse);
 }
 
 .table-modern thead th {

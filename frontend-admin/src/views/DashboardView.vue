@@ -4,14 +4,14 @@
       <h1>Tableau de bord</h1>
       <div class="header-actions">
         <div class="year-filter">
-          <label>Année :</label>
-          <select v-model="selectedYear" @change="loadDashboardData" class="form-select">
+          <label class="year-label">Année :</label>
+          <select v-model="selectedYear" @change="loadDashboardData" class="year-select">
             <option v-for="year in availableYears" :key="year" :value="year">{{ year }}</option>
           </select>
         </div>
-        <button @click="loadDashboardData" :disabled="loading" class="btn-action btn-action-secondary">
-          <span class="material-symbols-outlined">refresh</span>
-          {{ loading ? 'Chargement...' : 'Actualiser' }}
+        <button @click="loadDashboardData" :disabled="loading" class="btn-refresh">
+          <span class="material-symbols-outlined refresh-icon">refresh</span>
+          <span class="refresh-text">{{ loading ? 'Chargement...' : 'Actualiser' }}</span>
         </button>
       </div>
     </div>
@@ -207,9 +207,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, nextTick, computed } from 'vue';
+import { ref, onMounted, onUnmounted, watch, nextTick, computed } from 'vue';
 import { Chart, registerables } from 'chart.js';
 import { comptabiliteApi, adhesionsApi, menuApi, rolesApi, donsApi, cartesApi } from '@/services/api';
+import { eventBus, EVENTS } from '@/utils/eventBus';
 
 Chart.register(...registerables);
 
@@ -326,7 +327,8 @@ function updatePieChart() {
   const paiements = paiementsData.value;
   const labels: string[] = [];
   const data: number[] = [];
-  const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
+  // Couleurs fonctionnelles uniquement : noir, rouge, vert, jaune
+  const colors = ['#000000', '#DC2626', '#16A34A', '#EAB308', '#1A1A1A', '#525252'];
 
   const moyens: Record<string, string> = {
     especes: 'Espèces',
@@ -465,36 +467,36 @@ function updateCAChart() {
         {
           label: 'Adhésions',
           data: adhesionsData,
-          backgroundColor: 'rgba(102, 126, 234, 0.7)',
-          borderColor: 'var(--primary)',
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          borderColor: '#000000',
           borderWidth: 2,
         },
         {
           label: 'Dons',
           data: donsData,
-          backgroundColor: 'rgba(236, 72, 153, 0.7)',
-          borderColor: '#ec4899',
+          backgroundColor: 'rgba(220, 38, 38, 0.7)',
+          borderColor: '#DC2626',
           borderWidth: 2,
         },
         {
           label: 'Crédits manuels',
           data: creditsData,
-          backgroundColor: 'rgba(34, 197, 94, 0.7)',
-          borderColor: '#22c55e',
+          backgroundColor: 'rgba(22, 163, 74, 0.7)',
+          borderColor: '#16A34A',
           borderWidth: 2,
         },
         {
           label: 'Total CA',
           data: totalData,
           type: 'line',
-          borderColor: '#f59e0b',
-          backgroundColor: 'rgba(245, 158, 11, 0.1)',
+          borderColor: '#EAB308',
+          backgroundColor: 'rgba(234, 179, 8, 0.1)',
           borderWidth: 3,
           fill: false,
           tension: 0.4,
           pointRadius: 6,
           pointHoverRadius: 8,
-          pointBackgroundColor: '#f59e0b',
+          pointBackgroundColor: '#EAB308',
           pointBorderColor: '#fff',
           pointBorderWidth: 2,
         },
@@ -622,6 +624,16 @@ onMounted(async () => {
   }, 200);
 });
 
+onUnmounted(() => {
+  // Nettoyer les listeners d'événements
+  eventBus.off(EVENTS.ADHESION_UPDATED, handleAdhesionUpdated);
+  eventBus.off(EVENTS.ADHESION_CREATED, handleAdhesionCreated);
+  eventBus.off(EVENTS.ADHESION_DELETED, handleAdhesionDeleted);
+  eventBus.off(EVENTS.DON_CREATED, handleDonCreated);
+  eventBus.off(EVENTS.DON_UPDATED, handleDonUpdated);
+  eventBus.off(EVENTS.DON_DELETED, handleDonDeleted);
+});
+
 let isYearLoading = false;
 
 watch(selectedYear, async () => {
@@ -665,36 +677,86 @@ watch(selectedYear, async () => {
 
 .year-filter {
   display: flex;
+  flex-direction: row;
   align-items: center;
-  gap: 10px;
+  gap: var(--spacing-md);
 }
 
-.year-filter label {
-  font-weight: 500;
-  color: #2c3e50;
+.year-label {
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  margin: 0;
+  white-space: nowrap;
 }
 
-.year-filter select {
-  padding: 8px 15px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  font-size: 14px;
-  background: white;
+.year-select {
+  padding: var(--spacing-md) var(--spacing-lg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  min-width: 120px;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238B4513' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--spacing-md) center;
+  padding-right: calc(var(--spacing-xl) + var(--spacing-md));
+}
+
+.year-select:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--primary-pastel);
+  background-color: var(--bg-primary);
 }
 
 .btn-refresh {
-  padding: 8px 15px;
-  background-color: var(--primary);
-  color: white;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: var(--color-black);
+  color: var(--text-inverse);
   border: none;
-  border-radius: 5px;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  font-size: 14px;
-  transition: background-color 0.3s;
+  transition: all var(--transition-base);
+  font-size: var(--font-size-base);
+  font-family: var(--font-body);
+  font-weight: var(--font-weight-medium);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-refresh:hover:not(:disabled) {
-  background-color: var(--primary-dark);
+  background: var(--color-black-light);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-refresh:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-refresh:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.refresh-icon {
+  font-size: var(--font-size-xl);
+  color: var(--text-inverse);
+}
+
+.refresh-text {
+  font-weight: var(--font-weight-medium);
+  color: var(--text-inverse);
 }
 
 .btn-refresh:disabled {
@@ -740,47 +802,90 @@ watch(selectedYear, async () => {
 }
 
 .stat-card-large {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  border-radius: var(--radius-xl);
-  padding: 25px;
-  color: var(--text-inverse);
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 0;
+  padding: var(--spacing-xl);
+  color: var(--text-primary);
   display: flex;
   align-items: center;
-  gap: 20px;
-  box-shadow: var(--shadow-orange);
-  transition: transform var(--transition-slow), box-shadow var(--transition-slow);
+  gap: var(--spacing-lg);
+  transition: all var(--transition-base);
 }
 
 .stat-card-large:hover {
-  transform: translateY(-5px);
-  box-shadow: var(--shadow-lg);
+  background: var(--bg-secondary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .stat-card-large.total-revenue {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  border-left: 3px solid var(--color-black);
 }
 
 .stat-card-large.total-adhesions {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  border-left: 3px solid var(--color-red);
 }
 
 .stat-card-large.total-dons {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  border-left: 3px solid var(--color-green);
 }
 
 .stat-card-large.total-benevoles {
-  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+  border-left: 3px solid var(--color-yellow);
 }
 
 .stat-icon-large {
-  font-size: 50px;
-  opacity: 0.9;
+  width: 56px;
+  height: 56px;
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
 }
 
 .stat-icon-large .material-symbols-outlined {
-  font-size: 50px;
-  width: 50px;
-  height: 50px;
+  font-size: var(--font-size-2xl);
+  color: var(--text-primary);
+}
+
+.stat-card-large.total-revenue .stat-icon-large {
+  background: var(--color-black-pastel);
+  border-color: var(--color-black);
+}
+
+.stat-card-large.total-revenue .stat-icon-large .material-symbols-outlined {
+  color: var(--color-black);
+}
+
+.stat-card-large.total-adhesions .stat-icon-large {
+  background: var(--color-red-pastel);
+  border-color: var(--color-red);
+}
+
+.stat-card-large.total-adhesions .stat-icon-large .material-symbols-outlined {
+  color: var(--color-red);
+}
+
+.stat-card-large.total-dons .stat-icon-large {
+  background: var(--color-green-pastel);
+  border-color: var(--color-green);
+}
+
+.stat-card-large.total-dons .stat-icon-large .material-symbols-outlined {
+  color: var(--color-green);
+}
+
+.stat-card-large.total-benevoles .stat-icon-large {
+  background: var(--color-yellow-pastel);
+  border-color: var(--color-yellow);
+}
+
+.stat-card-large.total-benevoles .stat-icon-large .material-symbols-outlined {
+  color: var(--color-yellow);
 }
 
 .stat-content-large {
@@ -788,22 +893,26 @@ watch(selectedYear, async () => {
 }
 
 .stat-label-large {
-  font-size: 14px;
-  opacity: 0.9;
-  margin-bottom: 8px;
-  font-weight: 500;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-xs);
+  font-weight: var(--font-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .stat-value-large {
-  font-size: 32px;
-  font-weight: bold;
-  margin-bottom: 5px;
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-xs);
   line-height: 1.2;
+  letter-spacing: -0.02em;
 }
 
 .stat-subtitle {
-  font-size: 12px;
-  opacity: 0.8;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
 }
 
 /* Graphiques */
@@ -814,10 +923,11 @@ watch(selectedYear, async () => {
 }
 
 .chart-card {
-  background: white;
-  border-radius: 15px;
-  padding: 25px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  background: var(--bg-primary);
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border);
+  padding: var(--spacing-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .chart-card.full-width {
@@ -833,13 +943,14 @@ watch(selectedYear, async () => {
 
 .chart-header h3 {
   margin: 0;
-  color: #2c3e50;
-  font-size: 18px;
+  color: var(--text-primary);
+  font-size: var(--font-size-lg);
+  font-family: var(--font-display);
 }
 
 .chart-subtitle {
-  color: #7f8c8d;
-  font-size: 14px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
 }
 
 .chart-container {
@@ -854,16 +965,18 @@ watch(selectedYear, async () => {
 
 /* Sections */
 .section {
-  background: white;
-  padding: 25px;
-  border-radius: 15px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  background: var(--bg-primary);
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border);
+  box-shadow: var(--shadow-sm);
 }
 
 .section h2 {
-  margin: 0 0 20px 0;
-  color: #2c3e50;
-  font-size: 20px;
+  margin: 0 0 var(--spacing-lg) 0;
+  color: var(--text-primary);
+  font-size: var(--font-size-xl);
+  font-family: var(--font-display);
 }
 
 /* Détails des paiements */
@@ -878,9 +991,10 @@ watch(selectedYear, async () => {
 }
 
 .payment-card {
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  border-radius: 12px;
-  padding: 20px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border);
+  padding: var(--spacing-lg);
   display: flex;
   align-items: center;
   gap: 15px;
@@ -903,21 +1017,21 @@ watch(selectedYear, async () => {
 }
 
 .payment-label {
-  font-size: 13px;
-  color: #7f8c8d;
-  margin-bottom: 5px;
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-xs);
 }
 
 .payment-amount {
-  font-size: 20px;
-  font-weight: bold;
-  color: #2c3e50;
-  margin-bottom: 3px;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-xs);
 }
 
 .payment-count {
-  font-size: 11px;
-  color: #7f8c8d;
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
 }
 
 .payment-percentage {
@@ -940,10 +1054,11 @@ watch(selectedYear, async () => {
 }
 
 .info-card {
-  background: white;
-  border-radius: 15px;
-  padding: 25px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  background: var(--bg-primary);
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border);
+  padding: var(--spacing-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .info-card-header {
@@ -960,12 +1075,12 @@ watch(selectedYear, async () => {
 }
 
 .badge {
-  background: var(--primary);
-  color: white;
+  background: var(--color-black);
+  color: var(--text-inverse);
   padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: bold;
+  border-radius: 0;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
 }
 
 .list-container {
@@ -1002,7 +1117,7 @@ watch(selectedYear, async () => {
 
 .btn-small {
   padding: 6px 12px;
-  background-color: var(--primary);
+  background-color: var(--color-black);
   color: var(--text-inverse);
   border: none;
   border-radius: var(--radius-sm);
@@ -1012,7 +1127,7 @@ watch(selectedYear, async () => {
 }
 
 .btn-small:hover {
-  background-color: var(--primary-dark);
+  background-color: var(--color-black-light);
 }
 
 .more-items {
@@ -1125,10 +1240,10 @@ watch(selectedYear, async () => {
 .retry-btn {
   margin-top: 15px;
   padding: 10px 20px;
-  background-color: var(--primary);
-  color: white;
+  background-color: var(--color-black);
+  color: var(--text-inverse);
   border: none;
-  border-radius: 5px;
+  border-radius: var(--radius-md);
   cursor: pointer;
 }
 

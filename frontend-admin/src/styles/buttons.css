@@ -1,44 +1,42 @@
-/* ===== BOUTONS - Charte UI/UX IGCA Paris ===== */
-/* Styles uniformes pour tous les boutons et CTA */
+/* ===== BOUTONS - Couleurs Fonctionnelles ===== */
 
-/* ===== BOUTONS PRINCIPAUX ===== */
+/* ===== BOUTONS PRINCIPAUX (Noir) ===== */
 .btn-primary,
 .action-btn-primary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--spacing-sm);
-  padding: 12px 24px;
-  background: var(--primary);
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-black);
   color: var(--text-inverse);
   border: none;
-  border-radius: var(--radius-lg);
-  font-family: var(--font-accent);
-  font-size: var(--font-size-base);
+  border-radius: var(--radius-md);
+  font-family: var(--font-display);
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   cursor: pointer;
   transition: all var(--transition-base);
-  box-shadow: var(--shadow-sm);
   text-decoration: none;
   outline: none;
+  letter-spacing: 0.01em;
 }
 
 .btn-primary:hover:not(:disabled),
 .action-btn-primary:hover:not(:disabled) {
-  background: var(--primary-dark);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-orange);
+  background: var(--color-black-light);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
 .btn-primary:active:not(:disabled),
 .action-btn-primary:active:not(:disabled) {
   transform: translateY(0);
-  box-shadow: var(--shadow-sm);
 }
 
 .btn-primary:disabled,
 .action-btn-primary:disabled {
-  opacity: 0.6;
+  opacity: 0.4;
   cursor: not-allowed;
   transform: none;
 }
@@ -49,57 +47,33 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--spacing-sm);
-  padding: 12px 24px;
-  background: transparent;
-  color: var(--primary);
-  border: 2px solid var(--primary);
-  border-radius: var(--radius-lg);
-  font-family: var(--font-accent);
-  font-size: var(--font-size-base);
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--bg-primary);
+  color: var(--color-black);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-display);
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   cursor: pointer;
   transition: all var(--transition-base);
   text-decoration: none;
   outline: none;
+  letter-spacing: 0.01em;
 }
 
 .btn-secondary:hover:not(:disabled),
 .action-btn-secondary:hover:not(:disabled) {
-  background: var(--primary-pastel);
-  border-color: var(--primary-dark);
-  color: var(--primary-dark);
+  background: var(--bg-secondary);
+  border-color: var(--color-black);
+  transform: translateY(-1px);
 }
 
 .btn-secondary:disabled,
 .action-btn-secondary:disabled {
-  opacity: 0.6;
+  opacity: 0.4;
   cursor: not-allowed;
-}
-
-/* ===== BOUTONS TERTIAIRES ===== */
-.btn-tertiary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--spacing-sm);
-  padding: 12px 24px;
-  background: transparent;
-  color: var(--secondary);
-  border: none;
-  border-radius: var(--radius-lg);
-  font-family: var(--font-accent);
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-medium);
-  cursor: pointer;
-  transition: all var(--transition-base);
-  text-decoration: none;
-  outline: none;
-}
-
-.btn-tertiary:hover:not(:disabled) {
-  background: var(--beige-light);
-  color: var(--text-primary);
 }
 
 /* ===== BOUTONS ICÔNES ===== */
@@ -110,8 +84,8 @@
   justify-content: center;
   width: 40px;
   height: 40px;
-  background: var(--bg-secondary);
-  border: 1.5px solid var(--border);
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
   color: var(--text-secondary);
   cursor: pointer;
@@ -122,21 +96,18 @@
 
 .btn-icon:hover:not(:disabled),
 .action-btn-icon:hover:not(:disabled) {
-  background: var(--beige-light);
-  border-color: var(--primary);
-  color: var(--primary);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
+  background: var(--bg-secondary);
+  border-color: var(--color-black);
+  color: var(--color-black);
 }
 
 .btn-icon:disabled,
 .action-btn-icon:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
-  transform: none;
 }
 
-/* ===== BOUTONS ICÔNES PETITS ===== */
+/* ===== BOUTONS PETITS ===== */
 .btn-icon-small,
 .action-btn-small {
   display: flex;
@@ -145,7 +116,7 @@
   width: 32px;
   height: 32px;
   background: transparent;
-  border: none;
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
   cursor: pointer;
@@ -156,177 +127,118 @@
 
 .btn-icon-small:hover:not(:disabled),
 .action-btn-small:hover:not(:disabled) {
-  background: var(--beige-light);
-  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border-color: var(--color-black);
+  color: var(--color-black);
 }
 
+/* ===== BOUTONS AVEC COULEURS FONCTIONNELLES ===== */
 .btn-icon-small.success,
 .action-btn-small.success {
-  color: var(--success);
+  color: var(--color-green);
 }
 
 .btn-icon-small.success:hover:not(:disabled),
 .action-btn-small.success:hover:not(:disabled) {
-  background: var(--success-light);
-  color: var(--success);
+  background: var(--color-green-pastel);
+  border-color: var(--color-green);
+  color: var(--color-green);
 }
 
 .btn-icon-small.warning,
 .action-btn-small.warning {
-  color: var(--warning);
+  color: var(--color-yellow);
 }
 
 .btn-icon-small.warning:hover:not(:disabled),
 .action-btn-small.warning:hover:not(:disabled) {
-  background: var(--warning-light);
-  color: var(--warning);
+  background: var(--color-yellow-pastel);
+  border-color: var(--color-yellow);
+  color: var(--color-yellow);
 }
 
 .btn-icon-small.danger,
 .action-btn-small.danger {
-  color: var(--danger);
+  color: var(--color-red);
 }
 
 .btn-icon-small.danger:hover:not(:disabled),
 .action-btn-small.danger:hover:not(:disabled) {
-  background: var(--danger-light);
-  color: var(--danger);
+  background: var(--color-red-pastel);
+  border-color: var(--color-red);
+  color: var(--color-red);
 }
 
-/* ===== BOUTONS SUCCÈS ===== */
+/* ===== BOUTONS SUCCÈS (Vert) ===== */
 .btn-success {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--spacing-sm);
   padding: 12px 24px;
-  background: var(--success);
+  background: var(--color-green);
   color: var(--text-inverse);
   border: none;
-  border-radius: var(--radius-lg);
-  font-family: var(--font-accent);
+  border-radius: var(--radius-md);
+  font-family: var(--font-display);
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-medium);
   cursor: pointer;
   transition: all var(--transition-base);
-  box-shadow: var(--shadow-sm);
-  text-decoration: none;
-  outline: none;
 }
 
 .btn-success:hover:not(:disabled) {
-  background: #059669;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  background: var(--color-green-light);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
-/* ===== BOUTONS DANGER ===== */
+/* ===== BOUTONS DANGER (Rouge) ===== */
 .btn-danger {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--spacing-sm);
   padding: 12px 24px;
-  background: var(--danger);
+  background: var(--color-red);
   color: var(--text-inverse);
   border: none;
-  border-radius: var(--radius-lg);
-  font-family: var(--font-accent);
+  border-radius: var(--radius-md);
+  font-family: var(--font-display);
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-medium);
   cursor: pointer;
   transition: all var(--transition-base);
-  box-shadow: var(--shadow-sm);
-  text-decoration: none;
-  outline: none;
 }
 
 .btn-danger:hover:not(:disabled) {
-  background: #DC2626;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+  background: var(--color-red-light);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
-/* ===== BOUTONS AVEC ICÔNES ===== */
-.btn-primary .material-symbols-outlined,
-.btn-secondary .material-symbols-outlined,
-.btn-tertiary .material-symbols-outlined,
-.btn-success .material-symbols-outlined,
-.btn-danger .material-symbols-outlined,
-.action-btn-primary .material-symbols-outlined {
-  font-size: 20px;
-}
-
-.btn-text {
-  display: inline-block;
-  white-space: nowrap;
-  line-height: 1.5;
-}
-
-/* ===== BOUTONS DE FILTRES ===== */
-.btn-filters {
+/* ===== BOUTONS AVERTISSEMENT (Jaune) ===== */
+.btn-warning {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--spacing-sm);
-  padding: 10px 16px;
-  background: var(--bg-secondary);
-  border: 1.5px solid var(--border);
+  padding: 12px 24px;
+  background: var(--color-yellow);
+  color: var(--text-primary);
+  border: none;
   border-radius: var(--radius-md);
-  color: var(--text-secondary);
-  font-family: var(--font-accent);
-  font-size: var(--font-size-sm);
+  font-family: var(--font-display);
+  font-size: var(--font-size-base);
   font-weight: var(--font-weight-medium);
   cursor: pointer;
   transition: all var(--transition-base);
-  outline: none;
 }
 
-.btn-filters:hover {
-  background: var(--beige-light);
-  border-color: var(--primary);
-  color: var(--primary);
-}
-
-.btn-filters.active {
-  background: var(--primary-pastel);
-  border-color: var(--primary);
-  color: var(--primary);
-}
-
-/* ===== CHIPS / BADGES CLICABLES ===== */
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-  padding: 6px 12px;
-  background: var(--bg-secondary);
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius-full);
-  color: var(--text-secondary);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  cursor: pointer;
-  transition: all var(--transition-base);
-  outline: none;
-}
-
-.chip:hover {
-  background: var(--beige-light);
-  border-color: var(--primary);
-  color: var(--primary);
-}
-
-.chip.active {
-  background: var(--primary-pastel);
-  border-color: var(--primary);
-  color: var(--primary);
-  font-weight: var(--font-weight-semibold);
-}
-
-/* ===== BOUTONS DANS MODALS ===== */
-.modal-footer .btn-primary,
-.modal-footer .btn-secondary {
-  min-width: 120px;
+.btn-warning:hover:not(:disabled) {
+  background: var(--color-yellow-light);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
 /* ===== ANIMATION SPIN ===== */
@@ -351,13 +263,4 @@
     padding: 10px 20px;
     font-size: var(--font-size-sm);
   }
-  
-  .btn-text {
-    display: none;
-  }
-  
-  .action-btn-primary {
-    padding: 10px;
-  }
 }
-

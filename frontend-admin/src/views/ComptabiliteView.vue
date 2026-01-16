@@ -89,7 +89,7 @@
               
               <!-- Section CRÉDITS -->
               <div style="margin-bottom: 20px;">
-                <h4 style="color: #059669; font-size: 14px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                <h4 style="color: var(--color-green); font-size: 14px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
                   <span class="material-symbols-outlined" style="font-size: 18px;">trending_up</span>
                   CRÉDITS
                 </h4>
@@ -105,15 +105,15 @@
                   <span class="label">Crédits manuels:</span>
                   <span class="value revenue">{{ formatAmount(overviewComplete?.revenus?.credits_manuels || 0) }} €</span>
                 </div>
-                <div class="detail-item" style="border-top: 2px solid #d1fae5; margin-top: 8px; padding-top: 12px; background: #f0fdf4; border-radius: 6px; padding: 12px; margin-left: -12px; margin-right: -12px;">
-                  <span class="label" style="font-weight: 600; color: #059669;">Total crédits:</span>
+                <div class="detail-item" style="border-top: 2px solid var(--color-green-pastel); margin-top: 8px; padding-top: 12px; background: var(--color-green-pastel); border-radius: 0; padding: 12px; margin-left: -12px; margin-right: -12px;">
+                  <span class="label" style="font-weight: 600; color: var(--color-green);">Total crédits:</span>
                   <span class="value revenue" style="font-weight: 700; font-size: 18px;">{{ formatAmount(overviewComplete?.revenus?.total || 0) }} €</span>
                 </div>
               </div>
 
               <!-- Section DÉBITS -->
               <div>
-                <h4 style="color: #dc2626; font-size: 14px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                <h4 style="color: var(--color-red); font-size: 14px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
                   <span class="material-symbols-outlined" style="font-size: 18px;">trending_down</span>
                   DÉBITS
                 </h4>
@@ -121,8 +121,8 @@
                   <span class="label">Dépenses:</span>
                   <span class="value expense">{{ formatAmount(overviewComplete?.depenses?.total || 0) }} €</span>
                 </div>
-                <div class="detail-item" style="border-top: 2px solid #fee2e2; margin-top: 8px; padding-top: 12px; background: #fef2f2; border-radius: 6px; padding: 12px; margin-left: -12px; margin-right: -12px;">
-                  <span class="label" style="font-weight: 600; color: #dc2626;">Total débits:</span>
+                <div class="detail-item" style="border-top: 2px solid var(--color-red-pastel); margin-top: 8px; padding-top: 12px; background: var(--color-red-pastel); border-radius: 0; padding: 12px; margin-left: -12px; margin-right: -12px;">
+                  <span class="label" style="font-weight: 600; color: var(--color-red);">Total débits:</span>
                   <span class="value expense" style="font-weight: 700; font-size: 18px;">{{ formatAmount(overviewComplete?.depenses?.total || 0) }} €</span>
                 </div>
               </div>
@@ -555,6 +555,9 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue';
 import { comptabiliteApi } from '@/services/api';
+import { usePermissions } from '@/composables/usePermissions';
+
+const { permissions } = usePermissions();
 
 const activeTab = ref('overview');
 const loading = ref(false);
@@ -1047,18 +1050,7 @@ onMounted(() => {
   padding: 24px;
 }
 
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.page-header h1 {
-  margin: 0;
-  font-size: 28px;
-  color: #1e293b;
-}
+/* Header - styles maintenant dans view-base.css */
 
 .header-actions {
   display: flex;
@@ -1088,13 +1080,13 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   padding: 10px 20px;
-  background: var(--primary);
-  color: white;
+  background: var(--color-black);
+  color: var(--text-inverse);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  font-weight: 500;
-  transition: all 0.2s;
+  font-weight: var(--font-weight-medium);
+  transition: all var(--transition-base);
 }
 
 .btn-primary:hover {

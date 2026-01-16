@@ -17,15 +17,27 @@
       </div>
       <div class="header-right">
         <div class="header-actions">
-          <button class="header-icon-btn" title="Notifications">
+          <button 
+            class="header-icon-btn" 
+            title="Notifications"
+            @click="router.push('/app/profile')"
+          >
             <span class="material-symbols-outlined">notifications</span>
             <span v-if="notificationCount > 0" class="notification-badge">{{ notificationCount }}</span>
           </button>
-          <button class="header-icon-btn" title="Paramètres">
+          <button 
+            class="header-icon-btn" 
+            title="Paramètres"
+            @click="router.push('/app/settings')"
+          >
             <span class="material-symbols-outlined">settings</span>
           </button>
         </div>
-        <div class="user-profile">
+        <div 
+          class="user-profile"
+          @click="router.push('/app/profile')"
+          style="cursor: pointer;"
+        >
           <div class="profile-avatar">
             {{ userInitials }}
           </div>
@@ -130,8 +142,7 @@ const menuItems = computed(() => {
     { path: '/app/comptabilite', label: 'Comptabilité', icon: 'account_balance_wallet', roles: ['admin', 'super_admin'] },
     { path: '/app/dons', label: 'Dons', icon: 'favorite', roles: ['admin', 'super_admin'] },
     { path: '/app/menu', label: 'Menu du jour', icon: 'restaurant_menu', roles: ['admin', 'super_admin', 'benevole', 'membre'] },
-    { path: '/app/roles', label: 'Rôles', icon: 'admin_panel_settings', roles: ['admin', 'super_admin'] },
-    { path: '/app/users', label: 'Utilisateurs', icon: 'people', roles: ['admin', 'super_admin'] },
+    { path: '/app/users-roles', label: 'Utilisateurs & Rôles', icon: 'admin_panel_settings', roles: ['admin', 'super_admin'] },
   ];
   return allItems;
 });
@@ -150,13 +161,15 @@ function handleLogout() {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: var(--bg-page);
+  background: transparent;
+  position: relative;
+  z-index: 1;
 }
 
-/* Top Header */
+/* Top Header - Minimaliste */
 .app-header {
-  height: 80px;
-  background: linear-gradient(135deg, var(--primary-pastel) 0%, var(--beige-cream) 100%);
+  height: 64px;
+  background: var(--bg-primary);
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
@@ -165,13 +178,13 @@ function handleLogout() {
   position: sticky;
   top: 0;
   z-index: var(--z-sticky);
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: var(--spacing-md);
 }
 
 .logo-section {
@@ -192,36 +205,37 @@ function handleLogout() {
 .logo-placeholder {
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  background: var(--color-black);
   color: var(--text-inverse);
-  border-radius: var(--radius-md);
+  border-radius: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: var(--font-weight-bold);
   font-size: 18px;
-  letter-spacing: 1px;
+  letter-spacing: 0.05em;
   flex-shrink: 0;
 }
 
 .app-title {
   font-family: var(--font-display);
-  font-size: 24px;
+  font-size: 20px;
   font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
   margin: 0;
+  letter-spacing: -0.01em;
 }
 
 .header-right {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--spacing-md);
 }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 .header-icon-btn {
@@ -240,20 +254,20 @@ function handleLogout() {
 }
 
 .header-icon-btn:hover {
-  background: var(--beige-light);
-  color: var(--text-primary);
+  background: var(--bg-secondary);
+  color: var(--color-black);
 }
 
 .notification-badge {
   position: absolute;
-  top: 4px;
-  right: 4px;
-  background: var(--primary);
+  top: 2px;
+  right: 2px;
+  background: var(--color-red);
   color: var(--text-inverse);
   font-size: 10px;
   font-weight: var(--font-weight-bold);
   padding: 2px 6px;
-  border-radius: 10px;
+  border-radius: var(--radius-full);
   min-width: 18px;
   text-align: center;
 }
@@ -261,22 +275,25 @@ function handleLogout() {
 .user-profile {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-md);
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm);
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: all var(--transition-base);
+  background: transparent;
+  border: none;
+  position: relative;
 }
 
 .user-profile:hover {
-  background: var(--beige-light);
+  background: var(--bg-secondary);
 }
 
 .profile-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-full);
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  width: 36px;
+  height: 36px;
+  border-radius: 0;
+  background: var(--color-black);
   color: var(--text-inverse);
   display: flex;
   align-items: center;
@@ -301,7 +318,7 @@ function handleLogout() {
 
 .profile-role {
   font-size: var(--font-size-xs);
-  color: var(--text-muted);
+  color: var(--text-secondary);
   line-height: 1.2;
 }
 
@@ -322,16 +339,15 @@ function handleLogout() {
   overflow: hidden;
 }
 
-/* Sidebar */
+/* Sidebar - Minimaliste */
 .sidebar {
-  width: 260px;
+  width: 240px;
   background: var(--bg-primary);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   transition: width var(--transition-slow);
   overflow: hidden;
-  box-shadow: var(--shadow-sm);
 }
 
 .sidebar.collapsed {
@@ -354,39 +370,30 @@ function handleLogout() {
 .nav-item {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-md);
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg);
   color: var(--text-secondary);
   text-decoration: none;
-  border-radius: var(--radius-md);
+  border-radius: 0;
   transition: all var(--transition-base);
   position: relative;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
-  font-family: var(--font-accent);
+  font-family: var(--font-display);
+  margin: 0;
+  border-left: 3px solid transparent;
 }
 
 .nav-item:hover {
-  background: var(--beige-light);
+  background: var(--bg-secondary);
   color: var(--text-primary);
 }
 
 .nav-item.active {
-  background: var(--primary-pastel);
-  color: var(--primary);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
   font-weight: var(--font-weight-semibold);
-}
-
-.nav-item.active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 24px;
-  background: var(--primary);
-  border-radius: 0 2px 2px 0;
+  border-left-color: var(--color-black);
 }
 
 .nav-icon {
@@ -462,7 +469,9 @@ function handleLogout() {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--bg-page);
+  background: transparent;
+  position: relative;
+  z-index: 1;
 }
 
 .content-wrapper {

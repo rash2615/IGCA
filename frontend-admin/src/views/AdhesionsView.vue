@@ -37,6 +37,7 @@
           <span class="material-symbols-outlined">download</span>
         </button>
         <button 
+          v-if="permissions.canCreate"
           @click="openCreateModal" 
           class="action-btn-primary"
           title="Ajouter une nouvelle adhésion"
@@ -461,8 +462,8 @@
               <input v-model="formData.prenom" type="text" required />
             </div>
             <div class="form-group">
-              <label>Email *</label>
-              <input v-model="formData.email" type="email" required />
+              <label>Email</label>
+              <input v-model="formData.email" type="email" />
             </div>
             <div class="form-group">
               <label>Téléphone</label>
@@ -642,11 +643,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { adhesionsApi, cartesApi } from '@/services/api';
+import { usePermissions } from '@/composables/usePermissions';
+import { eventBus, EVENTS } from '@/utils/eventBus';
 
 const router = useRouter();
+const { permissions } = usePermissions();
 const adhesions = ref<any[]>([]);
 const loading = ref(false);
 const saving = ref(false);
@@ -1659,6 +1663,10 @@ function confirmDelete(adhesion: any) {
 async function deleteAdhesion(id: number) {
   try {
     await adhesionsApi.delete(id);
+    
+    // Notifier les autres vues de la suppression
+    eventBus.emit(EVENTS.ADHESION_DELETED, { id });
+    
     await loadAdhesions(currentPage.value);
   } catch (error: any) {
     console.error('Erreur lors de la suppression:', error);
@@ -1873,7 +1881,31 @@ function formatFileSize(bytes: number): string {
   return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
 }
 
+// Écouter les événements de mise à jour
+function handleAdhesionUpdated(data: any) {
+  console.log('🔄 Adhésion mise à jour, rechargement...', data);
+  // Recharger les données pour voir les changements
+  loadAdhesions(currentPage.value);
+}
+
+function handleAdhesionCreated(data: any) {
+  console.log('✨ Nouvelle adhésion créée, rechargement...', data);
+  // Recharger les données pour voir la nouvelle adhésion
+  loadAdhesions(currentPage.value);
+}
+
+function handleAdhesionDeleted(data: any) {
+  console.log('🗑️ Adhésion supprimée, rechargement...', data);
+  // Recharger les données pour retirer l'adhésion supprimée
+  loadAdhesions(currentPage.value);
+}
+
 onMounted(async () => {
+  // Écouter les événements de synchronisation
+  eventBus.on(EVENTS.ADHESION_UPDATED, handleAdhesionUpdated);
+  eventBus.on(EVENTS.ADHESION_CREATED, handleAdhesionCreated);
+  eventBus.on(EVENTS.ADHESION_DELETED, handleAdhesionDeleted);
+  
   await loadAvailableYears();
   await loadAdhesions(1);
   
@@ -1888,6 +1920,13 @@ onMounted(async () => {
       openActionsMenu.value = null;
     }
   });
+});
+
+onUnmounted(() => {
+  // Nettoyer les listeners d'événements
+  eventBus.off(EVENTS.ADHESION_UPDATED, handleAdhesionUpdated);
+  eventBus.off(EVENTS.ADHESION_CREATED, handleAdhesionCreated);
+  eventBus.off(EVENTS.ADHESION_DELETED, handleAdhesionDeleted);
 });
 </script>
 
@@ -1906,26 +1945,7 @@ onMounted(async () => {
   overflow-x: hidden;
 }
 
-/* Header */
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: white;
-  padding: 24px 32px;
-  border-radius: 16px;
-  margin-bottom: 24px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  border: 1px solid #f0f0f0;
-}
-
-.page-header h1 {
-  margin: 0;
-  font-size: 28px;
-  font-weight: 600;
-  color: #1f2937;
-  letter-spacing: -0.3px;
-}
+/* Header - styles maintenant dans view-base.css */
 
 .header-actions {
   display: flex;
@@ -2078,11 +2098,12 @@ onMounted(async () => {
 
 /* Filters panel */
 .filters-panel {
-  background: white;
-  border-radius: 12px;
-  padding: 24px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  background: var(--bg-primary);
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .filters-content {
@@ -2292,13 +2313,13 @@ onMounted(async () => {
 }
 
 .adhesion-card {
-  background: white;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  transition: all 0.2s;
+  background: var(--bg-primary);
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border);
+  padding: var(--spacing-lg);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-base);
   position: relative;
-  border: 2px solid transparent;
 }
 
 .adhesion-card:hover {

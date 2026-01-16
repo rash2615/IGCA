@@ -932,6 +932,9 @@ router.put('/:id', upload.single('photo'), async (req: AuthRequest, res) => {
       data: result.rows[0],
     });
   } catch (error: any) {
+    const { id } = req.params;
+    const { statut } = req.body;
+    
     if (error.code === '23505') {
       return res.status(400).json({ error: 'Cette adhésion existe déjà (conflit unique)' });
     }
@@ -1202,7 +1205,7 @@ async function loadImageForPDF(imageUrl: string | null): Promise<Buffer | null> 
   }
 }
 
-// Générer une attestation de paiement pour une adhésion
+// Générer un reçu de paiement pour une adhésion (avec toutes les mentions légales)
 router.get('/:id/attestation', async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
@@ -1235,235 +1238,160 @@ router.get('/:id/attestation', async (req: AuthRequest, res) => {
     doc.on('end', () => {
       const pdfBuffer = Buffer.concat(buffers);
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename=attestation_paiement_${adhesion.id}_${adhesion.nom}_${adhesion.prenom}.pdf`);
+      res.setHeader('Content-Disposition', `attachment; filename=recu_paiement_${adhesion.id}_${adhesion.nom}_${adhesion.prenom}.pdf`);
       res.send(pdfBuffer);
     });
 
-    // Variables de design (basées sur le HTML)
+    // Variables de design - Charte minimaliste noir et blanc
     const pageWidth = 595; // A4 width in points
     const pageHeight = 842; // A4 height in points
-    const wrapPadding = 28; // padding du .wrap
-    const cardPadding = 16;
-    const borderColor = '#e5e7eb';
-    const textColor = '#111827';
-    const mutedColor = '#6b7280';
-    const softBg = '#f9fafb';
-    const accentColor = '#0f766e';
+    const margin = 40; // Marges uniformes
+    const borderColor = '#000000'; // Noir pour bordures
+    const textColor = '#000000'; // Noir pour texte principal
+    const mutedColor = '#525252'; // Gris foncé pour texte secondaire
+    const lightGray = '#F5F5F5'; // Gris clair pour fonds
+    const greenColor = '#16A34A'; // Vert pour statut payé
+    const redColor = '#DC2626'; // Rouge pour statut expiré/en attente
     
-    let currentY = 0;
+    let currentY = margin;
 
-    // ========== HEADER (basé sur le HTML) ==========
-    const headerHeight = 80;
-    const headerPadding = 22;
-    
-    // Fond header avec gradient (blanc vers gris très clair)
-    doc.rect(0, 0, pageWidth, headerHeight)
-      .fillColor('#ffffff')
-      .fill();
-    
-    // Gradient effect (simulé)
-    doc.rect(0, 0, pageWidth, headerHeight)
-      .fillColor('#fbfbfb')
-      .fill();
-    
-    // Bordure inférieure
-    doc.moveTo(0, headerHeight)
-      .lineTo(pageWidth, headerHeight)
-      .strokeColor(borderColor)
-      .lineWidth(1)
-      .stroke();
-
-    // Logo (gauche)
-    const logoX = wrapPadding;
-    const logoY = headerPadding;
-    const logoSize = 54;
-    
-    // Rectangle logo avec bordure arrondie (simulée)
-    doc.rect(logoX, logoY, logoSize, logoSize)
-      .fillColor(softBg)
-      .fill()
-      .strokeColor(borderColor)
-      .lineWidth(1)
-      .stroke();
-    
-    // Logo placeholder (cercle bleu)
-    doc.circle(logoX + logoSize/2, logoY + logoSize/2, logoSize/2 - 5)
-      .fillColor(accentColor)
-      .fill();
-
-    // Brand text (à droite du logo)
-    const brandX = logoX + logoSize + 14;
-    const brandY = logoY;
-    
-    doc.fontSize(16)
-      .fillColor(textColor)
-      .text('IGCA PARIS', brandX, brandY);
-    
-    doc.fontSize(12)
-      .fillColor(mutedColor)
-      .text('Indian Gujarati Cultural Association Paris', brandX, brandY + 18);
-
-    // Contact (droite)
-    const contactX = pageWidth - wrapPadding;
-    const contactY = logoY;
-    
     const currentDate = new Date().toLocaleDateString('fr-FR', { 
       day: '2-digit', 
       month: '2-digit', 
       year: 'numeric' 
     });
-    
-    doc.fontSize(12)
-      .fillColor(mutedColor)
-      .text('Contact : contact@gujaratisamajparis.com', contactX, contactY, { align: 'right' });
-    
-    doc.fontSize(12)
-      .fillColor(mutedColor)
-      .text('Téléphone : 07 69 34 20 75', contactX, contactY + 14, { align: 'right' });
 
-    currentY = headerHeight + wrapPadding;
-
-    // ========== DOC-HEAD (Titre et métadonnées) ==========
-    const docHeadY = currentY;
-    const docHeadHeight = 80;
-    const docHeadPadding = 18;
+    // ========== HEADER MINIMALISTE ==========
+    // Logo et nom (gauche)
+    doc.fontSize(20)
+      .fillColor(textColor)
+      .font('Helvetica-Bold')
+      .text('IGCA PARIS', margin, currentY);
     
-    // Fond doc-head
-    doc.rect(wrapPadding, docHeadY, pageWidth - wrapPadding * 2, docHeadHeight)
-      .fillColor(softBg)
-      .fill()
+    doc.fontSize(10)
+      .fillColor(mutedColor)
+      .font('Helvetica')
+      .text('Indian Gujarati Cultural Association Paris', margin, currentY + 16);
+
+    // Contact (droite)
+    doc.fontSize(9)
+      .fillColor(mutedColor)
+      .font('Helvetica')
+      .text('contact@gujaratisamajparis.com', pageWidth - margin, currentY, { align: 'right' });
+    
+    doc.fontSize(9)
+      .fillColor(mutedColor)
+      .font('Helvetica')
+      .text('07 69 34 20 75', pageWidth - margin, currentY + 10, { align: 'right' });
+
+    // Ligne de séparation
+    currentY += 35;
+    doc.moveTo(margin, currentY)
+      .lineTo(pageWidth - margin, currentY)
       .strokeColor(borderColor)
       .lineWidth(1)
       .stroke();
     
-    // Titre
-    doc.fontSize(24)
-      .fillColor(textColor)
-      .text('Attestation de paiement', wrapPadding + docHeadPadding, docHeadY + docHeadPadding);
-    
-    // Sous-titre
-    doc.fontSize(13)
-      .fillColor(mutedColor)
-      .text('Document officiel certifiant le paiement de la cotisation d\'adhésion.', 
-            wrapPadding + docHeadPadding, docHeadY + docHeadPadding + 28, 
-            { width: 400 });
+    currentY += 20;
 
-    // Métadonnées (droite)
-    const metaX = pageWidth - wrapPadding - docHeadPadding;
-    const metaY = docHeadY + docHeadPadding;
-    
-    doc.fontSize(12)
-      .fillColor(mutedColor)
-      .text('Référence :', metaX, metaY, { align: 'right' });
-    doc.fontSize(12)
+    // ========== TITRE ET MÉTADONNÉES ==========
+    doc.fontSize(28)
       .fillColor(textColor)
-      .text(`IGCA-${new Date().getFullYear()}-${String(receiptNumber).padStart(6, '0')}`, metaX, metaY + 12, { align: 'right' });
+      .font('Helvetica-Bold')
+      .text('REÇU DE PAIEMENT', margin, currentY);
     
-    doc.fontSize(12)
+    currentY += 30;
+
+    // Métadonnées (2 colonnes)
+    const metaLeftX = margin;
+    const metaRightX = pageWidth / 2;
+    
+    doc.fontSize(9)
       .fillColor(mutedColor)
-      .text('Date d\'émission :', metaX, metaY + 28, { align: 'right' });
-    doc.fontSize(12)
+      .font('Helvetica')
+      .text('Référence :', metaLeftX, currentY);
+    doc.fontSize(9)
       .fillColor(textColor)
-      .text(currentDate, metaX, metaY + 40, { align: 'right' });
+      .font('Helvetica-Bold')
+      .text(`IGCA-${new Date().getFullYear()}-${String(receiptNumber).padStart(6, '0')}`, metaLeftX, currentY + 10);
     
-    // Badge statut
+    doc.fontSize(9)
+      .fillColor(mutedColor)
+      .font('Helvetica')
+      .text('Date d\'émission :', metaRightX, currentY);
+    doc.fontSize(9)
+      .fillColor(textColor)
+      .font('Helvetica-Bold')
+      .text(currentDate, metaRightX, currentY + 10);
+    
+    // Statut (avec couleur fonctionnelle)
     const statutText = adhesion.statut === 'actif' ? 'Payé' : 
                        adhesion.statut === 'expire' ? 'Expiré' : 
                        adhesion.statut === 'renouvele' ? 'Payé' : 'En attente';
-    const badgeColor = adhesion.statut === 'actif' || adhesion.statut === 'renouvele' ? accentColor : '#b45309';
+    const statusColor = adhesion.statut === 'actif' || adhesion.statut === 'renouvele' ? greenColor : 
+                        adhesion.statut === 'expire' ? redColor : mutedColor;
     
-    doc.rect(metaX - 80, metaY + 50, 80, 20)
-      .fillColor('#ffffff')
-      .fill()
-      .strokeColor(badgeColor)
-      .lineWidth(1)
-      .stroke();
-    
-    doc.fontSize(12)
-      .fillColor(badgeColor)
-      .text(`Statut : ${statutText}`, metaX, metaY + 54, { align: 'right' });
-
-    currentY = docHeadY + docHeadHeight + 14;
-
-    // ========== GRID (2 cartes côte à côte) ==========
-    const gridGap = 14;
-    const cardWidth = (pageWidth - wrapPadding * 2 - gridGap) / 2;
-    const cardHeight = 200;
-    
-    // Carte 1: Informations personnelles
-    const card1X = wrapPadding;
-    const card1Y = currentY;
-    
-    doc.rect(card1X, card1Y, cardWidth, cardHeight)
-      .fillColor('#ffffff')
-      .fill()
-      .strokeColor(borderColor)
-      .lineWidth(1)
-      .stroke();
-    
-    // Titre carte
-    doc.fontSize(14)
+    doc.fontSize(9)
       .fillColor(mutedColor)
-      .text('Informations personnelles', card1X + cardPadding, card1Y + cardPadding);
+      .font('Helvetica')
+      .text('Statut :', metaRightX, currentY + 20);
+    doc.fontSize(9)
+      .fillColor(statusColor)
+      .font('Helvetica-Bold')
+      .text(statutText, metaRightX, currentY + 30);
     
-    let rowY = card1Y + cardPadding + 20;
-    const rowHeight = 30;
+    currentY += 50;
+
+    // ========== INFORMATIONS EN 2 COLONNES ==========
+    const colWidth = (pageWidth - margin * 3) / 2;
+    const col1X = margin;
+    const col2X = margin + colWidth + margin;
+    let colY = currentY;
+    
+    // Colonne 1: Informations personnelles
+    doc.fontSize(11)
+      .fillColor(mutedColor)
+      .font('Helvetica')
+      .text('INFORMATIONS PERSONNELLES', col1X, colY);
+    
+    colY += 15;
     
     // Nom et prénom
-    doc.fontSize(13)
+    doc.fontSize(9)
       .fillColor(mutedColor)
-      .text('Nom et prénom', card1X + cardPadding, rowY);
-    doc.fontSize(13)
+      .font('Helvetica')
+      .text('Nom et prénom :', col1X, colY);
+    doc.fontSize(10)
       .fillColor(textColor)
-      .text(`${adhesion.prenom || ''} ${(adhesion.nom || '').toUpperCase()}`, 
-            card1X + cardPadding, rowY + 12, 
-            { width: cardWidth - cardPadding * 2, align: 'right' });
+      .font('Helvetica-Bold')
+      .text(`${adhesion.prenom || ''} ${(adhesion.nom || '').toUpperCase()}`, col1X, colY + 10, { width: colWidth });
     
-    // Ligne séparatrice
-    doc.moveTo(card1X + cardPadding, rowY + 25)
-      .lineTo(card1X + cardWidth - cardPadding, rowY + 25)
-      .strokeColor(borderColor)
-      .lineWidth(0.5)
-      .stroke();
-    
-    rowY += rowHeight;
+    colY += 25;
     
     // Email
     if (adhesion.email) {
-      doc.fontSize(13)
+      doc.fontSize(9)
         .fillColor(mutedColor)
-        .text('Email', card1X + cardPadding, rowY);
-      doc.fontSize(13)
+        .font('Helvetica')
+        .text('Email :', col1X, colY);
+      doc.fontSize(9)
         .fillColor(textColor)
-        .text(adhesion.email, card1X + cardPadding, rowY + 12, 
-              { width: cardWidth - cardPadding * 2, align: 'right' });
-      
-      doc.moveTo(card1X + cardPadding, rowY + 25)
-        .lineTo(card1X + cardWidth - cardPadding, rowY + 25)
-        .strokeColor(borderColor)
-        .lineWidth(0.5)
-        .stroke();
-      
-      rowY += rowHeight;
+        .font('Helvetica')
+        .text(adhesion.email, col1X, colY + 10, { width: colWidth });
+      colY += 20;
     }
     
     // Téléphone
     if (adhesion.telephone) {
-      doc.fontSize(13)
+      doc.fontSize(9)
         .fillColor(mutedColor)
-        .text('Téléphone', card1X + cardPadding, rowY);
-      doc.fontSize(13)
+        .font('Helvetica')
+        .text('Téléphone :', col1X, colY);
+      doc.fontSize(9)
         .fillColor(textColor)
-        .text(adhesion.telephone, card1X + cardPadding, rowY + 12, 
-              { width: cardWidth - cardPadding * 2, align: 'right' });
-      
-      doc.moveTo(card1X + cardPadding, rowY + 25)
-        .lineTo(card1X + cardWidth - cardPadding, rowY + 25)
-        .strokeColor(borderColor)
-        .lineWidth(0.5)
-        .stroke();
-      
-      rowY += rowHeight;
+        .font('Helvetica')
+        .text(adhesion.telephone, col1X, colY + 10, { width: colWidth });
+      colY += 20;
     }
     
     // Date d'adhésion
@@ -1473,144 +1401,73 @@ router.get('/:id/attestation', async (req: AuthRequest, res) => {
         month: '2-digit',
         year: 'numeric'
       });
-      doc.fontSize(13)
+      doc.fontSize(9)
         .fillColor(mutedColor)
-        .text('Date d\'adhésion', card1X + cardPadding, rowY);
-      doc.fontSize(13)
+        .font('Helvetica')
+        .text('Date d\'adhésion :', col1X, colY);
+      doc.fontSize(9)
         .fillColor(textColor)
-        .text(dateAdhesion, card1X + cardPadding, rowY + 12, 
-              { width: cardWidth - cardPadding * 2, align: 'right' });
+        .font('Helvetica')
+        .text(dateAdhesion, col1X, colY + 10, { width: colWidth });
     }
     
-    // Carte 2: Détail de paiement
-    const card2X = card1X + cardWidth + gridGap;
-    const card2Y = currentY;
+    // Colonne 2: Détail de paiement
+    colY = currentY;
     
-    doc.rect(card2X, card2Y, cardWidth, cardHeight)
-      .fillColor('#ffffff')
-      .fill()
-      .strokeColor(borderColor)
-      .lineWidth(1)
-      .stroke();
-    
-    // Titre carte
-    doc.fontSize(14)
+    doc.fontSize(11)
       .fillColor(mutedColor)
-      .text('Détail de paiement', card2X + cardPadding, card2Y + cardPadding);
+      .font('Helvetica')
+      .text('DÉTAIL DE PAIEMENT', col2X, colY);
     
-    rowY = card2Y + cardPadding + 20;
+    colY += 15;
     
     // Montant payé
     const montant = typeof adhesion.tarif === 'string' ? parseFloat(adhesion.tarif) : adhesion.tarif;
-    doc.fontSize(13)
+    doc.fontSize(9)
       .fillColor(mutedColor)
-      .text('Montant payé', card2X + cardPadding, rowY);
-    doc.fontSize(13)
-      .fillColor(textColor)
-      .text(`${montant.toFixed(2)} €`, card2X + cardPadding, rowY + 12, 
-            { width: cardWidth - cardPadding * 2, align: 'right' });
-    
-    doc.moveTo(card2X + cardPadding, rowY + 25)
-      .lineTo(card2X + cardWidth - cardPadding, rowY + 25)
-      .strokeColor(borderColor)
-      .lineWidth(0.5)
-      .stroke();
-    
-    rowY += rowHeight;
-    
-    // Moyen de paiement
-    doc.fontSize(13)
-      .fillColor(mutedColor)
-      .text('Moyen de paiement', card2X + cardPadding, rowY);
-    doc.fontSize(13)
-      .fillColor(textColor)
-      .text(formatMoyenPaiementForFacture(adhesion.moyen_paiement), 
-            card2X + cardPadding, rowY + 12, 
-            { width: cardWidth - cardPadding * 2, align: 'right' });
-    
-    doc.moveTo(card2X + cardPadding, rowY + 25)
-      .lineTo(card2X + cardWidth - cardPadding, rowY + 25)
-      .strokeColor(borderColor)
-      .lineWidth(0.5)
-      .stroke();
-    
-    rowY += rowHeight;
-    
-    // Numéro d'adhésion
-    doc.fontSize(13)
-      .fillColor(mutedColor)
-      .text('Numéro d\'adhésion', card2X + cardPadding, rowY);
-    doc.fontSize(13)
-      .fillColor(textColor)
-      .text(membershipNumber, card2X + cardPadding, rowY + 12, 
-            { width: cardWidth - cardPadding * 2, align: 'right' });
-    
-    doc.moveTo(card2X + cardPadding, rowY + 25)
-      .lineTo(card2X + cardWidth - cardPadding, rowY + 25)
-      .strokeColor(borderColor)
-      .lineWidth(0.5)
-      .stroke();
-    
-    rowY += rowHeight;
-    
-    // Statut
-    doc.fontSize(13)
-      .fillColor(mutedColor)
-      .text('Statut', card2X + cardPadding, rowY);
-    doc.fontSize(13)
-      .fillColor(textColor)
-      .text(statutText, card2X + cardPadding, rowY + 12, 
-            { width: cardWidth - cardPadding * 2, align: 'right' });
-
-    currentY = card1Y + cardHeight + 16;
-
-
-    // ========== SIGNATURE (basé sur le HTML) ==========
-    const signatureGap = 14;
-    const signBox1Width = (pageWidth - wrapPadding * 2 - signatureGap) * 0.6;
-    const signBox2Width = (pageWidth - wrapPadding * 2 - signatureGap) * 0.4;
-    const signBoxHeight = 140;
-    
-    // Sign-box 1 (signature du président)
-    const signBox1X = wrapPadding;
-    const signBox1Y = currentY;
-    
-    doc.rect(signBox1X, signBox1Y, signBox1Width, signBoxHeight)
-      .fillColor('#ffffff')
-      .fill()
-      .strokeColor(borderColor)
-      .lineWidth(1)
-      .stroke();
-    
-    const signPadding = 16;
-    let signY = signBox1Y + signPadding;
-    
-    // Label président
-    doc.fontSize(12)
-      .fillColor(mutedColor)
-      .text('PRÉSIDENT', signBox1X + signPadding, signY);
-    
-    signY += 18;
-    
-    // Nom président
+      .font('Helvetica')
+      .text('Montant payé :', col2X, colY);
     doc.fontSize(14)
       .fillColor(textColor)
-      .text('Sanjay Parekh', signBox1X + signPadding, signY);
+      .font('Helvetica-Bold')
+      .text(`${montant.toFixed(2)} €`, col2X, colY + 10);
     
-    // Texte à droite
-    doc.fontSize(12)
+    colY += 30;
+    
+    // Moyen de paiement
+    doc.fontSize(9)
       .fillColor(mutedColor)
-      .text('Fait pour servir et valoir ce que de droit.', 
-            signBox1X + signBox1Width - signPadding, signBox1Y + signPadding, 
-            { width: signBox1Width - signPadding * 2, align: 'right' });
+      .font('Helvetica')
+      .text('Moyen de paiement :', col2X, colY);
+    doc.fontSize(9)
+      .fillColor(textColor)
+      .font('Helvetica')
+      .text(formatMoyenPaiementForFacture(adhesion.moyen_paiement), col2X, colY + 10, { width: colWidth });
+    
+    colY += 20;
+    
+    // Numéro d'adhésion
+    doc.fontSize(9)
+      .fillColor(mutedColor)
+      .font('Helvetica')
+      .text('Numéro d\'adhésion :', col2X, colY);
+    doc.fontSize(9)
+      .fillColor(textColor)
+      .font('Helvetica-Bold')
+      .text(membershipNumber, col2X, colY + 10, { width: colWidth });
+    
+    currentY = Math.max(colY + 30, currentY + 100);
+
+
+    // ========== SIGNATURE ==========
+    const signBoxWidth = pageWidth - margin * 2;
+    const signBoxHeight = 80;
+    const signBoxX = margin;
+    const signBoxY = currentY;
     
     // Zone signature
-    const signImgY = signBox1Y + signBoxHeight - 90;
-    const signImgHeight = 70;
-    
-    doc.rect(signBox1X + signPadding, signImgY, signBox1Width - signPadding * 2, signImgHeight)
-      .fillColor(softBg)
-      .fill()
+    doc.rect(signBoxX, signBoxY, signBoxWidth, signBoxHeight)
+      .fillColor('#ffffff')
       .strokeColor(borderColor)
       .lineWidth(1)
       .stroke();
@@ -1634,82 +1491,92 @@ router.get('/:id/attestation', async (req: AuthRequest, res) => {
       }
       
       if (signatureBuffer) {
-        doc.image(signatureBuffer, signBox1X + signPadding + 5, signImgY + 5, {
-          width: signBox1Width - signPadding * 2 - 10,
-          height: signImgHeight - 10,
-          fit: [signBox1Width - signPadding * 2 - 10, signImgHeight - 10],
-          align: 'center',
-          valign: 'center'
+        doc.image(signatureBuffer, signBoxX + 10, signBoxY + 10, {
+          width: 120,
+          height: 40,
+          fit: [120, 40]
         });
       }
     } catch (error: any) {
       logger.warn('Erreur lors du chargement de la signature:', error.message);
     }
     
-    // Hint signature
-    doc.fontSize(11)
+    // Nom président
+    doc.fontSize(10)
+      .fillColor(textColor)
+      .font('Helvetica-Bold')
+      .text('Sanjay Parekh', signBoxX + 10, signBoxY + 55);
+    
+    doc.fontSize(8)
       .fillColor(mutedColor)
-      .text('Signature et cachet (si applicable)', signBox1X + signPadding, signBox1Y + signBoxHeight - 15);
+      .font('Helvetica')
+      .text('Président', signBoxX + 10, signBoxY + 67);
     
-    // Sign-box 2 (note)
-    const signBox2X = signBox1X + signBox1Width + signatureGap;
-    const signBox2Y = currentY;
-    
-    doc.rect(signBox2X, signBox2Y, signBox2Width, signBoxHeight)
-      .fillColor('rgba(15,118,110,.05)')
-      .fill()
-      .strokeColor('rgba(15,118,110,.25)')
-      .lineWidth(1)
-      .stroke();
-    
-    doc.fontSize(12.5)
-      .fillColor(textColor)
-      .text('Important :', signBox2X + signPadding, signBox2Y + signPadding, { continued: true });
-    doc.fontSize(12.5)
-      .fillColor(accentColor)
-      .text('Important :', signBox2X + signPadding, signBox2Y + signPadding);
-    
-    doc.fontSize(12.5)
-      .fillColor(textColor)
-      .text('ce document est édité à partir des informations transmises lors du paiement. En cas d\'erreur, merci de contacter l\'association.', 
-            signBox2X + signPadding, signBox2Y + signPadding + 18, 
-            { width: signBox2Width - signPadding * 2, lineGap: 3 });
+    // Texte à droite
+    doc.fontSize(8)
+      .fillColor(mutedColor)
+      .font('Helvetica')
+      .text('Fait pour servir et valoir ce que de droit.', 
+            signBoxX + signBoxWidth - 10, signBoxY + 10, 
+            { width: signBoxWidth - 200, align: 'right' });
 
-    currentY = signBox1Y + signBoxHeight + 18;
+    currentY = signBoxY + signBoxHeight + 15;
 
-    // ========== FOOTER (basé sur le HTML) ==========
-    if (currentY > 750) {
-      doc.addPage();
-      currentY = 50;
-    }
-    
-    const footerY = Math.max(currentY, 750);
-    const footerPadding = 18;
-    
-    // Ligne de séparation footer
-    doc.moveTo(0, footerY)
-      .lineTo(pageWidth, footerY)
+    // ========== FOOTER - MENTIONS LÉGALES COMPACTES ==========
+    // Ligne de séparation
+    doc.moveTo(margin, currentY)
+      .lineTo(pageWidth - margin, currentY)
       .strokeColor(borderColor)
       .lineWidth(1)
       .stroke();
     
-    // Fond footer
-    doc.rect(0, footerY, pageWidth, pageHeight - footerY)
-      .fillColor('#ffffff')
-      .fill();
+    currentY += 10;
 
-    doc.fontSize(11)
+    // Mentions légales compactes (2 colonnes)
+    const footerColWidth = (pageWidth - margin * 3) / 2;
+    let footerY = currentY;
+    
+    // Colonne gauche
+    doc.fontSize(7)
       .fillColor(mutedColor)
-      .text(
-        'Cette association, enregistrée sous le numéro 96.12339-RNA W931007370, est régie par la loi n° 1901-IV du 1er juillet 1901 et le décret n° 1901-1 du 16 août 1901, avec le numéro SIRET 91199334300019. Le siège social de l\'association Indian Gujarati Cultural Association Paris est situé au 49 avenue Gambetta, 93170 Bagnolet. Cette cotisation ou ce don n\'est pas déductible d\'impôt.',
-        wrapPadding,
-        footerY + footerPadding,
-        {
-          width: pageWidth - wrapPadding * 2,
-          align: 'justify',
-          lineGap: 3
-        }
-      );
+      .font('Helvetica')
+      .text('Association loi 1901 | RNA : W931007370 | SIRET : 91199334300019', margin, footerY, { width: footerColWidth, lineGap: 1 });
+    
+    footerY += 20;
+    
+    doc.fontSize(7)
+      .fillColor(mutedColor)
+      .font('Helvetica')
+      .text('Siège social : 49 avenue Gambetta, 93170 Bagnolet, France', margin, footerY, { width: footerColWidth, lineGap: 1 });
+    
+    footerY += 15;
+    
+    doc.fontSize(7)
+      .fillColor(mutedColor)
+      .font('Helvetica')
+      .text('Contact : contact@gujaratisamajparis.com | 07 69 34 20 75', margin, footerY, { width: footerColWidth, lineGap: 1 });
+    
+    // Colonne droite
+    footerY = currentY;
+    
+    doc.fontSize(7)
+      .fillColor(mutedColor)
+      .font('Helvetica')
+      .text('Cette cotisation n\'est pas déductible des impôts (art. 200 CGI).', margin + footerColWidth + margin, footerY, { width: footerColWidth, lineGap: 1 });
+    
+    footerY += 20;
+    
+    doc.fontSize(7)
+      .fillColor(mutedColor)
+      .font('Helvetica')
+      .text('RGPD : Vos données sont traitées par IGCA Paris. Droit d\'accès, rectification, suppression et opposition.', margin + footerColWidth + margin, footerY, { width: footerColWidth, lineGap: 1 });
+    
+    footerY += 20;
+    
+    doc.fontSize(7)
+      .fillColor(mutedColor)
+      .font('Helvetica')
+      .text('Document généré le ' + currentDate + ' - Reçu de paiement officiel', margin + footerColWidth + margin, footerY, { width: footerColWidth, align: 'right' });
 
     doc.end();
   } catch (error: any) {

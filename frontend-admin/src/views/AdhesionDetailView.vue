@@ -18,10 +18,10 @@
           <button @click="generateAttestation" class="btn-action-glass" title="Générer attestation de paiement">
             <span class="material-symbols-outlined">description</span>
           </button>
-          <button @click="editAdhesion" class="btn-action-glass btn-primary-glass" title="Modifier">
+          <button v-if="permissions.canEdit" @click="editAdhesion" class="btn-action-glass btn-primary-glass" title="Modifier">
             <span class="material-symbols-outlined">edit</span>
           </button>
-          <button @click="confirmDelete" class="btn-action-glass btn-danger-glass" title="Supprimer">
+          <button v-if="permissions.canDelete" @click="confirmDelete" class="btn-action-glass btn-danger-glass" title="Supprimer">
             <span class="material-symbols-outlined">delete</span>
           </button>
         </div>
@@ -282,6 +282,112 @@
       </div>
     </div>
 
+    <!-- Modal d'édition -->
+    <div v-if="showEditModal" class="modal-glass" @click.self="showEditModal = false">
+      <div class="modal-content-glass modal-large">
+        <div class="modal-header-glass">
+          <h2>Modifier l'adhésion</h2>
+          <button @click="closeEditModal" class="btn-close-glass">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <form @submit.prevent="saveAdhesion" class="modal-body-glass">
+          <div class="form-group-glass">
+            <label>Nom *</label>
+            <input v-model="editForm.nom" type="text" required class="form-input-glass" />
+          </div>
+          <div class="form-group-glass">
+            <label>Prénom *</label>
+            <input v-model="editForm.prenom" type="text" required class="form-input-glass" />
+          </div>
+          <div class="form-group-glass">
+            <label>Email</label>
+            <input v-model="editForm.email" type="email" class="form-input-glass" />
+          </div>
+          <div class="form-group-glass">
+            <label>Téléphone</label>
+            <input v-model="editForm.telephone" type="tel" class="form-input-glass" />
+          </div>
+          <div class="form-group-glass">
+            <label>Date d'adhésion *</label>
+            <input v-model="editForm.date_adhesion" type="date" required class="form-input-glass" />
+          </div>
+          <div class="form-group-glass">
+            <label>Tarif (€) *</label>
+            <input v-model.number="editForm.tarif" type="number" step="0.01" min="0" required class="form-input-glass" />
+          </div>
+          <div class="form-group-glass">
+            <label>Moyen de paiement</label>
+            <select v-model="editForm.moyen_paiement" class="form-input-glass">
+              <option value="helloasso">HelloAsso</option>
+              <option value="especes">Espèces</option>
+              <option value="cheque">Chèque</option>
+              <option value="cb">Carte bancaire</option>
+              <option value="virement">Virement</option>
+            </select>
+          </div>
+          <div class="form-group-glass">
+            <label>Statut</label>
+            <select v-model="editForm.statut" class="form-input-glass">
+              <option value="actif">Actif</option>
+              <option value="inactif">Inactif</option>
+              <option value="suspendu">Suspendu</option>
+              <option value="banni">Banni</option>
+              <option value="expire">Expiré</option>
+              <option value="renouvele">Renouvelé</option>
+              <option value="a_generer">À générer</option>
+            </select>
+          </div>
+          
+          <!-- Upload d'image -->
+          <div class="form-group-glass">
+            <label>Photo</label>
+            <div class="photo-upload-section-glass">
+              <div class="photo-preview-glass" v-if="photoPreview || (editForm.photo_url && !selectedPhotoFile)">
+                <img
+                  :src="photoPreview || getImageUrl(editForm.photo_url)"
+                  alt="Preview"
+                  @error="photoPreview = null"
+                />
+                <button type="button" @click="removePhoto" class="btn-remove-photo-glass">
+                  <span class="material-symbols-outlined">close</span>
+                </button>
+              </div>
+              <div class="photo-upload-controls-glass">
+                <input
+                  ref="photoInputRef"
+                  type="file"
+                  accept="image/*"
+                  @change="handlePhotoFileSelect"
+                  style="display: none"
+                />
+                <button type="button" @click="triggerPhotoUpload" class="btn-upload-photo-glass">
+                  <span class="material-symbols-outlined">upload</span>
+                  {{ photoPreview || editForm.photo_url ? 'Changer la photo' : 'Ajouter une photo' }}
+                </button>
+                <div class="photo-url-input-glass">
+                  <input
+                    v-model="photoUrlInput"
+                    type="text"
+                    placeholder="Ou coller une URL d'image"
+                    @blur="handlePhotoUrlChange"
+                    class="form-input-glass"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-actions-glass">
+            <button type="button" @click="closeEditModal" class="btn-cancel-glass">Annuler</button>
+            <button type="submit" :disabled="saving" class="btn-submit-glass">
+              {{ saving ? 'Enregistrement...' : 'Enregistrer' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- Modal de confirmation de suppression -->
     <div v-if="showDeleteModal" class="modal-glass" @click.self="showDeleteModal = false">
       <div class="modal-content-glass">
@@ -300,9 +406,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { adhesionsApi, cartesApi } from '@/services/api';
+import { usePermissions } from '@/composables/usePermissions';
+import { eventBus, EVENTS } from '@/utils/eventBus';
+
+const { permissions } = usePermissions();
 
 const router = useRouter();
 const route = useRoute();
@@ -311,6 +421,24 @@ const loading = ref(true);
 const error = ref('');
 const showDeleteModal = ref(false);
 const deleting = ref(false);
+const showEditModal = ref(false);
+const saving = ref(false);
+const photoInputRef = ref<HTMLInputElement | null>(null);
+const photoPreview = ref<string | null>(null);
+const selectedPhotoFile = ref<File | null>(null);
+const photoUrlInput = ref('');
+
+const editForm = ref({
+  nom: '',
+  prenom: '',
+  email: '',
+  telephone: '',
+  date_adhesion: '',
+  tarif: 0,
+  moyen_paiement: 'helloasso',
+  statut: 'actif',
+  photo_url: '',
+});
 
 function formatDate(date: string) {
   if (!date) return 'Date invalide';
@@ -417,7 +545,126 @@ function goBack() {
 }
 
 function editAdhesion() {
-  router.push(`/app/adhesions/${route.params.id}/edit`);
+  if (!adhesion.value) return;
+  
+  // Initialiser le formulaire avec les données actuelles
+  editForm.value = {
+    nom: adhesion.value.nom || '',
+    prenom: adhesion.value.prenom || '',
+    email: adhesion.value.email || '',
+    telephone: adhesion.value.telephone || '',
+    date_adhesion: adhesion.value.date_adhesion ? new Date(adhesion.value.date_adhesion).toISOString().split('T')[0] : '',
+    tarif: adhesion.value.tarif || 0,
+    moyen_paiement: adhesion.value.moyen_paiement || 'helloasso',
+    statut: adhesion.value.statut || 'actif',
+    photo_url: adhesion.value.photo_url || '',
+  };
+  
+  photoUrlInput.value = adhesion.value.photo_url || '';
+  photoPreview.value = adhesion.value.photo_url ? getImageUrl(adhesion.value.photo_url) : null;
+  selectedPhotoFile.value = null;
+  
+  showEditModal.value = true;
+}
+
+function closeEditModal() {
+  showEditModal.value = false;
+  photoPreview.value = null;
+  selectedPhotoFile.value = null;
+  photoUrlInput.value = '';
+}
+
+function triggerPhotoUpload() {
+  photoInputRef.value?.click();
+}
+
+function handlePhotoFileSelect(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
+  
+  selectedPhotoFile.value = file;
+  photoUrlInput.value = '';
+  
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    photoPreview.value = e.target?.result as string;
+  };
+  reader.readAsDataURL(file);
+}
+
+function handlePhotoUrlChange() {
+  if (photoUrlInput.value && photoUrlInput.value.trim() !== '') {
+    selectedPhotoFile.value = null;
+    editForm.value.photo_url = photoUrlInput.value.trim();
+    photoPreview.value = photoUrlInput.value.trim();
+  } else if (!selectedPhotoFile.value) {
+    photoPreview.value = null;
+    editForm.value.photo_url = '';
+  }
+}
+
+function removePhoto() {
+  photoPreview.value = null;
+  selectedPhotoFile.value = null;
+  photoUrlInput.value = '';
+  editForm.value.photo_url = '';
+  if (photoInputRef.value) {
+    photoInputRef.value.value = '';
+  }
+}
+
+async function saveAdhesion() {
+  if (!adhesion.value) return;
+  
+  saving.value = true;
+  try {
+    const formDataToSend = new FormData();
+    
+    // Ajouter tous les champs sauf photo_url si on a un fichier
+    Object.keys(editForm.value).forEach(key => {
+      const value = (editForm.value as any)[key];
+      // Ne pas envoyer photo_url si on upload un fichier
+      if (key === 'photo_url' && selectedPhotoFile.value) {
+        return;
+      }
+      // Envoyer photo_url seulement si c'est une URL (pas de fichier)
+      if (key === 'photo_url' && !selectedPhotoFile.value && value) {
+        formDataToSend.append(key, value);
+        return;
+      }
+      // Envoyer tous les autres champs
+      if (key !== 'photo_url') {
+        if (value !== null && value !== undefined) {
+          formDataToSend.append(key, value.toString());
+        }
+      }
+    });
+    
+    // Ajouter le fichier photo si présent
+    if (selectedPhotoFile.value) {
+      formDataToSend.append('photo', selectedPhotoFile.value);
+    } else if (photoUrlInput.value && !selectedPhotoFile.value) {
+      // Si on a une URL mais pas de fichier, envoyer l'URL
+      formDataToSend.append('photo_url', photoUrlInput.value);
+    }
+    
+    await adhesionsApi.update(adhesion.value.id, formDataToSend);
+    alert('Adhésion modifiée avec succès !');
+    closeEditModal();
+    await loadAdhesion(); // Recharger les données
+    
+    // Notifier les autres vues de la mise à jour
+    eventBus.emit(EVENTS.ADHESION_UPDATED, {
+      id: adhesion.value.id,
+      photo_url: selectedPhotoFile.value ? 'updated' : editForm.value.photo_url
+    });
+  } catch (error: any) {
+    console.error('Erreur lors de la sauvegarde:', error);
+    alert(error.response?.data?.error || 'Erreur lors de la modification');
+  } finally {
+    saving.value = false;
+  }
 }
 
 function confirmDelete() {
@@ -429,7 +676,12 @@ async function deleteAdhesion() {
   
   deleting.value = true;
   try {
-    await adhesionsApi.delete(adhesion.value.id);
+    const adhesionId = adhesion.value.id;
+    await adhesionsApi.delete(adhesionId);
+    
+    // Notifier les autres vues de la suppression
+    eventBus.emit(EVENTS.ADHESION_DELETED, { id: adhesionId });
+    
     router.push('/app/adhesions');
   } catch (error: any) {
     console.error('Erreur lors de la suppression:', error);
@@ -506,16 +758,15 @@ onMounted(() => {
   padding: 30px;
 }
 
-/* Background gradient */
+/* Background gradient - Minimaliste */
 .background-gradient {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 50%, #f093fb 100%);
+  background: var(--bg-page);
   z-index: 0;
-  opacity: 0.1;
 }
 
 .detail-container {
@@ -525,74 +776,70 @@ onMounted(() => {
   margin: 0;
 }
 
-/* Glassmorphism effect */
+/* Cartes minimalistes */
 .glass-card {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  padding: 30px;
-  transition: all 0.3s ease;
+  background: var(--bg-primary);
+  border-radius: 0;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  padding: var(--spacing-xl);
+  transition: all var(--transition-base);
+  margin-bottom: var(--spacing-xl);
 }
 
 .glass-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  background: var(--bg-secondary);
 }
 
 /* Header */
 .page-header-glass {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  padding: 24px 30px;
-  margin-bottom: 30px;
+  background: var(--bg-primary);
+  border-radius: 0;
+  border: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  box-shadow: none;
+  padding: var(--spacing-xl);
+  margin-bottom: var(--spacing-xl);
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 20px;
+  gap: var(--spacing-lg);
 }
 
 .btn-back-glass {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(10px);
-  color: #2c3e50;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 12px;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  font-size: 14px;
-  transition: all 0.2s;
+  font-size: var(--font-size-sm);
+  transition: all var(--transition-base);
+  font-family: var(--font-body);
+  font-weight: var(--font-weight-medium);
 }
 
 .btn-back-glass:hover {
-  background: rgba(255, 255, 255, 0.9);
-  transform: translateX(-3px);
+  background: var(--bg-secondary);
+  border-color: var(--color-black);
 }
 
 .header-title h1 {
   margin: 0;
-  font-size: 28px;
-  font-weight: 700;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  font-family: var(--font-display);
 }
 
 .breadcrumb {
-  margin: 5px 0 0 0;
-  font-size: 13px;
-  color: #7f8c8d;
+  margin: var(--spacing-xs) 0 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
 }
 
 .header-actions-glass {
@@ -607,38 +854,40 @@ onMounted(() => {
   justify-content: center;
   width: 44px;
   height: 44px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(10px);
-  color: var(--primary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition-base);
 }
 
 .btn-action-glass:hover {
-  background: rgba(255, 255, 255, 0.9);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+  background: var(--bg-secondary);
+  border-color: var(--color-black);
+  color: var(--color-black);
 }
 
 .btn-action-glass.btn-primary-glass {
-  background: var(--primary);
+  background: var(--color-black);
   color: var(--text-inverse);
   border: none;
 }
 
 .btn-action-glass.btn-primary-glass:hover {
-  background: var(--primary-dark);
-  box-shadow: var(--shadow-orange);
+  background: var(--color-black-light);
+  box-shadow: var(--shadow-md);
 }
 
 .btn-action-glass.btn-danger-glass {
-  color: #e74c3c;
+  color: var(--color-red);
+  border-color: var(--color-red);
 }
 
 .btn-action-glass.btn-danger-glass:hover {
-  background: rgba(231, 76, 60, 0.1);
+  background: var(--color-red-pastel);
+  border-color: var(--color-red);
+  color: var(--color-red);
 }
 
 /* Loading */
@@ -654,9 +903,9 @@ onMounted(() => {
 .spinner-glass {
   width: 50px;
   height: 50px;
-  border: 4px solid rgba(255, 255, 255, 0.3);
-  border-top: 4px solid var(--primary);
-  border-radius: 50%;
+  border: 4px solid var(--border);
+  border-top: 4px solid var(--color-black);
+  border-radius: var(--radius-full);
   animation: spin 1s linear infinite;
 }
 
@@ -667,12 +916,11 @@ onMounted(() => {
 
 .error-glass {
   text-align: center;
-  padding: 40px;
-  background: rgba(248, 215, 218, 0.9);
-  backdrop-filter: blur(20px);
-  color: #e74c3c;
-  border-radius: 20px;
-  border: 1px solid rgba(231, 76, 60, 0.3);
+  padding: var(--spacing-4xl);
+  background: var(--color-red-pastel);
+  color: var(--color-red);
+  border-radius: 0;
+  border: 1px solid var(--color-red);
 }
 
 /* Carte d'identité */
@@ -685,11 +933,11 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 30px;
-  padding-bottom: 25px;
-  border-bottom: 2px solid rgba(102, 126, 234, 0.1);
+  margin-bottom: var(--spacing-xl);
+  padding-bottom: var(--spacing-lg);
+  border-bottom: 1px solid var(--border);
   flex-wrap: wrap;
-  gap: 20px;
+  gap: var(--spacing-lg);
 }
 
 .logo-section {
@@ -701,33 +949,31 @@ onMounted(() => {
 .logo-circle-glass {
   width: 70px;
   height: 70px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  border-radius: 0;
+  background: var(--color-black);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  box-shadow: none;
 }
 
 .logo-circle-glass .material-symbols-outlined {
   font-size: 36px;
-  color: white;
+  color: var(--text-inverse);
 }
 
 .logo-text-glass h2 {
   margin: 0;
-  font-size: 28px;
-  font-weight: 700;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  font-family: var(--font-display);
 }
 
 .logo-text-glass p {
-  margin: 5px 0 0 0;
-  font-size: 13px;
-  color: #7f8c8d;
+  margin: var(--spacing-xs) 0 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
 }
 
 .badges-header {
@@ -739,14 +985,15 @@ onMounted(() => {
 .badge-glass {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 500;
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: 0;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .badge-glass .material-symbols-outlined {
@@ -754,33 +1001,33 @@ onMounted(() => {
 }
 
 .badge-glass.badge-actif {
-  background: rgba(39, 174, 96, 0.15);
-  color: #27ae60;
-  border-color: rgba(39, 174, 96, 0.3);
+  background: var(--color-green);
+  color: var(--text-inverse);
+  border-color: var(--color-green);
 }
 
 .badge-glass.badge-expire {
-  background: rgba(231, 76, 60, 0.15);
-  color: #e74c3c;
-  border-color: rgba(231, 76, 60, 0.3);
+  background: var(--color-red);
+  color: var(--text-inverse);
+  border-color: var(--color-red);
 }
 
 .badge-glass.badge-renouvele {
-  background: rgba(52, 152, 219, 0.15);
-  color: #3498db;
-  border-color: rgba(52, 152, 219, 0.3);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border-color: var(--border);
 }
 
 .badge-glass.badge-online {
-  background: rgba(52, 152, 219, 0.15);
-  color: #3498db;
-  border-color: rgba(52, 152, 219, 0.3);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border-color: var(--border);
 }
 
 .badge-glass.badge-offline {
-  background: rgba(241, 196, 15, 0.15);
-  color: #f1c40f;
-  border-color: rgba(241, 196, 15, 0.3);
+  background: var(--color-yellow);
+  color: var(--text-primary);
+  border-color: var(--color-yellow);
 }
 
 .card-body-glass {
@@ -800,11 +1047,11 @@ onMounted(() => {
 .photo-frame-glass {
   width: 180px;
   height: 240px;
-  border-radius: 16px;
+  border-radius: 0;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.5);
-  border: 3px solid rgba(102, 126, 234, 0.2);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -822,7 +1069,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #bdc3c7;
+  color: var(--text-muted);
 }
 
 .photo-placeholder-glass .material-symbols-outlined {
@@ -832,14 +1079,14 @@ onMounted(() => {
 .photo-badge-glass {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  background: rgba(39, 174, 96, 0.15);
-  backdrop-filter: blur(10px);
-  border-radius: 20px;
-  font-size: 12px;
-  color: #27ae60;
-  border: 1px solid rgba(39, 174, 96, 0.3);
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-md);
+  background: var(--color-green-pastel);
+  border-radius: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-green);
+  border: 1px solid var(--color-green);
+  font-weight: var(--font-weight-medium);
 }
 
 .info-section-glass {
@@ -851,28 +1098,26 @@ onMounted(() => {
 }
 
 .name-glass {
-  font-size: 36px;
-  font-weight: 700;
-  margin: 0 0 15px 0;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-size: var(--font-size-4xl);
+  font-weight: var(--font-weight-bold);
+  margin: 0 0 var(--spacing-md) 0;
+  color: var(--text-primary);
+  font-family: var(--font-display);
   line-height: 1.2;
+  letter-spacing: -0.02em;
 }
 
 .id-badge-glass {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 18px;
-  background: rgba(102, 126, 234, 0.1);
-  backdrop-filter: blur(10px);
-  border-radius: 12px;
-  border: 1px solid rgba(102, 126, 234, 0.2);
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--primary);
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background: var(--bg-secondary);
+  border-radius: 0;
+  border: 1px solid var(--border);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
 }
 
 .details-grid-glass {
@@ -884,35 +1129,33 @@ onMounted(() => {
 .detail-item-glass {
   display: flex;
   align-items: flex-start;
-  gap: 15px;
-  padding: 15px;
-  background: rgba(255, 255, 255, 0.5);
-  backdrop-filter: blur(10px);
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  transition: all 0.2s;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  background: var(--bg-primary);
+  border-radius: 0;
+  border: 1px solid var(--border);
+  transition: all var(--transition-base);
 }
 
 .detail-item-glass:hover {
-  background: rgba(255, 255, 255, 0.7);
-  transform: translateX(5px);
+  background: var(--bg-secondary);
 }
 
 .detail-icon-glass {
   width: 40px;
   height: 40px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  border-radius: 0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
 }
 
 .detail-icon-glass .material-symbols-outlined {
   font-size: 22px;
-  color: white;
+  color: var(--text-primary);
 }
 
 .detail-content-glass {
@@ -923,56 +1166,53 @@ onMounted(() => {
 }
 
 .detail-label {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   text-transform: uppercase;
-  color: #7f8c8d;
-  font-weight: 600;
-  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.05em;
 }
 
 .detail-value {
-  font-size: 16px;
-  font-weight: 600;
-  color: #2c3e50;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
 }
 
 .detail-value.price-glass {
-  font-size: 20px;
-  font-weight: 700;
-  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-green);
 }
 
 .detail-value a {
-  color: var(--primary);
+  color: var(--color-black);
   text-decoration: none;
-  transition: all 0.2s;
+  transition: all var(--transition-base);
 }
 
 .detail-value a:hover {
-  color: var(--primary-dark);
+  color: var(--text-secondary);
   text-decoration: underline;
 }
 
 .card-footer-glass {
-  margin-top: 30px;
-  padding-top: 25px;
-  border-top: 2px solid rgba(102, 126, 234, 0.1);
+  margin-top: var(--spacing-xl);
+  padding-top: var(--spacing-lg);
+  border-top: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 15px;
+  gap: var(--spacing-md);
 }
 
 .footer-item-glass {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: #7f8c8d;
+  gap: var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
 }
 
 .footer-item-glass .material-symbols-outlined {
@@ -987,18 +1227,16 @@ onMounted(() => {
 .section-title-glass h2 {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--spacing-md);
   margin: 0;
-  font-size: 24px;
-  font-weight: 700;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  font-family: var(--font-display);
 }
 
 .section-title-glass .material-symbols-outlined {
-  color: var(--primary);
+  color: var(--text-primary);
 }
 
 .documents-grid-glass {
@@ -1016,29 +1254,26 @@ onMounted(() => {
 .document-icon-wrapper {
   width: 80px;
   height: 80px;
-  margin: 0 auto 20px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(10px);
+  margin: 0 auto var(--spacing-lg);
+  border-radius: 0;
+  background: var(--bg-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid var(--border);
 }
 
 .document-icon-gradient {
   font-size: 40px;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--text-primary);
 }
 
 .document-card-glass h3 {
-  margin: 0 0 20px 0;
-  font-size: 20px;
-  font-weight: 600;
-  color: #2c3e50;
+  margin: 0 0 var(--spacing-lg) 0;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  font-family: var(--font-display);
 }
 
 .document-info-glass {
@@ -1054,7 +1289,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 10px 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid var(--border);
 }
 
 .info-line-glass:last-child {
@@ -1062,20 +1297,20 @@ onMounted(() => {
 }
 
 .info-label {
-  font-size: 13px;
-  color: #7f8c8d;
-  font-weight: 500;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-medium);
 }
 
 .info-value {
-  font-size: 14px;
-  color: #2c3e50;
-  font-weight: 600;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  font-weight: var(--font-weight-semibold);
 }
 
 .info-value.price-glass {
-  color: #27ae60;
-  font-size: 16px;
+  color: var(--color-green);
+  font-size: var(--font-size-base);
 }
 
 .document-actions-glass {
@@ -1088,34 +1323,33 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 12px 20px;
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 12px;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--primary);
-  transition: all 0.2s;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  transition: all var(--transition-base);
 }
 
 .btn-download-glass:hover {
-  background: rgba(255, 255, 255, 0.9);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+  background: var(--bg-secondary);
+  border-color: var(--color-black);
+  color: var(--color-black);
 }
 
 .btn-download-glass.btn-primary-gradient {
-  background: var(--primary);
+  background: var(--color-black);
   color: var(--text-inverse);
   border: none;
 }
 
 .btn-download-glass.btn-primary-gradient:hover {
-  background: var(--primary-dark);
-  box-shadow: var(--shadow-orange);
+  background: var(--color-black-light);
+  box-shadow: var(--shadow-md);
 }
 
 .btn-download-glass .material-symbols-outlined {
@@ -1139,22 +1373,20 @@ onMounted(() => {
   gap: 12px;
   margin-bottom: 20px;
   padding-bottom: 15px;
-  border-bottom: 2px solid rgba(102, 126, 234, 0.1);
+  border-bottom: 1px solid var(--border);
 }
 
 .info-icon-gradient {
   font-size: 28px;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--text-primary);
 }
 
 .info-card-header h3 {
   margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: #2c3e50;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  font-family: var(--font-display);
 }
 
 .info-content-glass {
@@ -1167,8 +1399,8 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  padding: var(--spacing-md) 0;
+  border-bottom: 1px solid var(--border);
 }
 
 .info-item-glass:last-child {
@@ -1176,33 +1408,33 @@ onMounted(() => {
 }
 
 .info-item-glass .info-label {
-  font-size: 13px;
-  color: #7f8c8d;
-  font-weight: 500;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-medium);
 }
 
 .info-item-glass .info-value {
-  font-size: 14px;
-  color: #2c3e50;
-  font-weight: 600;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  font-weight: var(--font-weight-semibold);
 }
 
 .info-code {
-  background: rgba(102, 126, 234, 0.1);
-  padding: 6px 12px;
-  border-radius: 8px;
+  background: var(--bg-secondary);
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: 0;
   font-family: 'Courier New', monospace;
-  font-size: 12px;
-  color: var(--primary);
-  border: 1px solid rgba(102, 126, 234, 0.2);
+  font-size: var(--font-size-xs);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
 }
 
 .no-data-glass {
-  color: #7f8c8d;
+  color: var(--text-muted);
   font-style: italic;
   margin: 0;
   text-align: center;
-  padding: 20px;
+  padding: var(--spacing-xl);
 }
 
 /* Modal */
@@ -1213,35 +1445,37 @@ onMounted(() => {
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(5px);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
-  padding: 20px;
+  z-index: var(--z-modal-backdrop);
+  padding: var(--spacing-xl);
 }
 
 .modal-content-glass {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  border-radius: 20px;
-  padding: 35px;
+  background: var(--bg-primary);
+  border-radius: 0;
+  padding: var(--spacing-xl);
   max-width: 500px;
   width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  z-index: var(--z-modal);
 }
 
 .modal-content-glass h2 {
-  margin: 0 0 15px 0;
-  color: #2c3e50;
-  font-size: 24px;
+  margin: 0 0 var(--spacing-md) 0;
+  color: var(--text-primary);
+  font-size: var(--font-size-2xl);
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-bold);
 }
 
 .modal-content-glass .warning-glass {
-  color: #e74c3c;
-  font-weight: 500;
-  margin: 15px 0;
+  color: var(--color-red);
+  font-weight: var(--font-weight-medium);
+  margin: var(--spacing-md) 0;
 }
 
 .modal-actions-glass {
@@ -1252,34 +1486,217 @@ onMounted(() => {
 }
 
 .btn-cancel-glass {
-  background: rgba(149, 165, 166, 0.2);
-  backdrop-filter: blur(10px);
-  color: #2c3e50;
-  border: 1px solid rgba(149, 165, 166, 0.3);
-  padding: 12px 24px;
-  border-radius: 12px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  padding: var(--spacing-md) var(--spacing-xl);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  font-weight: 500;
-  transition: all 0.2s;
+  font-weight: var(--font-weight-medium);
+  transition: all var(--transition-base);
 }
 
 .btn-cancel-glass:hover {
-  background: rgba(149, 165, 166, 0.3);
+  background: var(--bg-secondary);
+  border-color: var(--color-black);
 }
 
 .btn-danger-glass {
-  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-  color: white;
+  background: var(--color-red);
+  color: var(--text-inverse);
   border: none;
-  padding: 12px 24px;
-  border-radius: 12px;
+  padding: var(--spacing-md) var(--spacing-xl);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  font-weight: 500;
-  transition: all 0.2s;
+  font-weight: var(--font-weight-medium);
+  transition: all var(--transition-base);
 }
 
 .btn-danger-glass:hover {
-  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+  background: var(--color-red-light);
+  box-shadow: var(--shadow-md);
+}
+
+/* Modal d'édition */
+.modal-large {
+  max-width: 700px;
+  width: 90%;
+}
+
+.modal-header-glass {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-xl);
+  padding-bottom: var(--spacing-lg);
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-header-glass h2 {
+  margin: 0;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  font-family: var(--font-display);
+}
+
+.btn-close-glass {
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-base);
+}
+
+.btn-close-glass:hover {
+  background: var(--bg-secondary);
+  border-color: var(--color-black);
+  color: var(--color-black);
+}
+
+.modal-body-glass {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.form-group-glass {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.form-group-glass label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+}
+
+.form-input-glass {
+  padding: var(--spacing-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  font-family: var(--font-body);
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  transition: all var(--transition-base);
+}
+
+.form-input-glass:focus {
+  outline: none;
+  border-color: var(--color-black);
+  box-shadow: 0 0 0 3px var(--color-black-pastel);
+}
+
+/* Upload photo */
+.photo-upload-section-glass {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.photo-preview-glass {
+  position: relative;
+  width: 200px;
+  height: 250px;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  overflow: hidden;
+  background: var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.photo-preview-glass img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.btn-remove-photo-glass {
+  position: absolute;
+  top: var(--spacing-sm);
+  right: var(--spacing-sm);
+  width: 32px;
+  height: 32px;
+  background: var(--color-black);
+  border: none;
+  border-radius: var(--radius-full);
+  color: var(--text-inverse);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-base);
+}
+
+.btn-remove-photo-glass:hover {
+  background: var(--color-red);
+}
+
+.photo-upload-controls-glass {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.btn-upload-photo-glass {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.btn-upload-photo-glass:hover {
+  background: var(--bg-secondary);
+  border-color: var(--color-black);
+}
+
+.photo-url-input-glass {
+  width: 100%;
+}
+
+.btn-submit-glass {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: var(--color-black);
+  color: var(--text-inverse);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  font-family: var(--font-display);
+}
+
+.btn-submit-glass:hover:not(:disabled) {
+  background: var(--color-black-light);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-submit-glass:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* Responsive */

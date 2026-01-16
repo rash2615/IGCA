@@ -112,9 +112,39 @@ const appRoutes = [
         },
       },
       {
+        path: 'users-roles',
+        name: 'users-roles',
+        component: () => import('@/views/UsersRolesView.vue'),
+        meta: { 
+          title: 'Utilisateurs & Rôles',
+          icon: 'admin_panel_settings',
+          roles: ['admin', 'super_admin']
+        },
+      },
+      {
+        path: 'settings',
+        name: 'settings',
+        component: () => import('@/views/SettingsView.vue'),
+        meta: { 
+          title: 'Paramètres',
+          icon: 'settings',
+          roles: ['admin', 'super_admin']
+        },
+      },
+      {
+        path: 'profile',
+        name: 'profile',
+        component: () => import('@/views/ProfileView.vue'),
+        meta: { 
+          title: 'Mon profil',
+          icon: 'person',
+          roles: ['admin', 'super_admin', 'benevole', 'membre']
+        },
+      },
+      {
         path: 'roles',
         name: 'roles',
-        component: () => import('@/views/RolesView.vue'),
+        redirect: { name: 'users-roles' },
         meta: { 
           title: 'Rôles',
           icon: 'admin_panel_settings',
@@ -124,7 +154,7 @@ const appRoutes = [
       {
         path: 'users',
         name: 'users',
-        component: () => import('@/views/UsersView.vue'),
+        redirect: { name: 'users-roles' },
         meta: { 
           title: 'Utilisateurs',
           icon: 'groups',

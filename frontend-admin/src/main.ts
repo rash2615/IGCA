@@ -6,6 +6,9 @@ import './assets/main.css';
 import './styles/design-system.css';
 import './styles/buttons.css';
 import './styles/grids-spacing.css';
+import './styles/sections.css';
+import './styles/view-base.css';
+import './styles/accessibility.css';
 
 const app = createApp(App);
 

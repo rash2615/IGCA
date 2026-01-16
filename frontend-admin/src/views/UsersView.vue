@@ -26,8 +26,8 @@
     <!-- Statistiques -->
     <div class="stats-grid">
       <div class="stat-card">
-        <div class="stat-icon" style="background: #dbeafe; color: #3b82f6;">
-          <span class="material-symbols-outlined">groups</span>
+        <div class="stat-icon" style="background: var(--bg-secondary); border-color: var(--color-black);">
+          <span class="material-symbols-outlined" style="color: var(--color-black);">groups</span>
         </div>
         <div class="stat-content">
           <div class="stat-value">{{ stats.total || 0 }}</div>
@@ -35,8 +35,8 @@
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon" style="background: #d1fae5; color: #10b981;">
-          <span class="material-symbols-outlined">check_circle</span>
+        <div class="stat-icon" style="background: var(--color-green-pastel); border-color: var(--color-green);">
+          <span class="material-symbols-outlined" style="color: var(--color-green);">check_circle</span>
         </div>
         <div class="stat-content">
           <div class="stat-value">{{ stats.actifs || 0 }}</div>
@@ -44,8 +44,8 @@
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon" style="background: #fee2e2; color: #ef4444;">
-          <span class="material-symbols-outlined">cancel</span>
+        <div class="stat-icon" style="background: var(--color-red-pastel); border-color: var(--color-red);">
+          <span class="material-symbols-outlined" style="color: var(--color-red);">cancel</span>
         </div>
         <div class="stat-content">
           <div class="stat-value">{{ stats.inactifs || 0 }}</div>
@@ -53,7 +53,7 @@
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon" style="background: #fef3c7; color: #f59e0b;">
+        <div class="stat-icon" style="background: var(--color-yellow-pastel); border-color: var(--color-yellow);">
           <span class="material-symbols-outlined">admin_panel_settings</span>
         </div>
         <div class="stat-content">
@@ -508,19 +508,7 @@ onMounted(() => {
   margin: 0;
 }
 
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.page-header h1 {
-  font-size: 28px;
-  font-weight: 700;
-  color: #1f2937;
-  margin: 0;
-}
+/* Header - styles maintenant dans view-base.css */
 
 .header-actions {
   display: flex;
@@ -689,8 +677,8 @@ onMounted(() => {
 }
 
 .table-modern thead {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  color: white;
+  background: var(--color-black);
+  color: var(--text-inverse);
 }
 
 .table-modern thead th {
